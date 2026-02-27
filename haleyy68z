@@ -265,9 +265,9 @@ local function startMainScript()
 
     -- ===== Disallow / Allow Toggle =====
     local allowRow = Instance.new("Frame")
-    allowRow.Size = UDim2.new(0.9, 0, 0, 34); allowRow.Position = UDim2.new(0.05, 0, 0, 168); allowRow.BackgroundTransparency = 1; allowRow.Parent = mainFrame
+    allowRow.Size = UDim2.new(0.9, 0, 0, 30); allowRow.Position = UDim2.new(0.05, 0, 0, 148); allowRow.BackgroundTransparency = 1; allowRow.Parent = mainFrame
     local allowToggle = Instance.new("TextButton")
-    allowToggle.Size = UDim2.new(1, -38, 1, 0); allowToggle.BackgroundColor3 = BG_BUTTON; allowToggle.Text = "Closed"; allowToggle.TextColor3 = BLUE_TEXT; allowToggle.TextSize = 18; allowToggle.Font = Enum.Font.GothamBold; allowToggle.Parent = allowRow; Instance.new("UICorner", allowToggle)
+    allowToggle.Size = UDim2.new(1, -38, 1, 0); allowToggle.BackgroundColor3 = BG_BUTTON; allowToggle.Text = "CLOSED"; allowToggle.TextColor3 = BLUE_TEXT; allowToggle.TextSize = 16; allowToggle.Font = Enum.Font.GothamBold; allowToggle.Parent = allowRow; Instance.new("UICorner", allowToggle)
     local allowStroke = Instance.new("UIStroke", allowToggle); allowStroke.Thickness = 1.5; allowStroke.Color = BLUE_MAIN
     allowKeybind = Instance.new("TextButton")
     allowKeybind.Size = UDim2.new(0, 26, 0, 22); allowKeybind.Position = UDim2.new(1, -28, 0.5, -11); allowKeybind.BackgroundColor3 = KEYBIND_BG; allowKeybind.Text = keybinds.allow.Name; allowKeybind.TextColor3 = KEYBIND_TEXT; allowKeybind.TextSize = 12; allowKeybind.Font = Enum.Font.GothamBold; allowKeybind.Parent = allowRow; Instance.new("UICorner", allowKeybind)
@@ -282,9 +282,10 @@ local function startMainScript()
         local img = sGui and sGui:FindFirstChildOfClass("ImageLabel")
         if img then 
             local id = tostring(img.Image)
-            if id:find("110783679426495") or id == "" or id:find("0") then return true end
-            return false
+            -- L'ID 110783679426495 semble être celui de l'accès autorisé (Open)
+            if id:find("110783679426495") then return false end
         end
+        -- Par défaut ou si l'ID d'autorisation n'est pas là, c'est fermé (Closed)
         return true
     end
     local function clearEsp() for _, item in ipairs(esp_items) do pcall(function() item:Destroy() end) end table.clear(esp_items) end
@@ -304,19 +305,30 @@ local function startMainScript()
 
     local function toggleAllow()
         isAllowed = not isAllowed
-        allowToggle.Text = isAllowed and "Open" or "Closed"
+        allowToggle.Text = isAllowed and "OPEN" or "CLOSED"
         allowToggle.BackgroundColor3 = isAllowed and BLUE_BRIGHT or BG_BUTTON
         allowToggle.TextColor3 = isAllowed and Color3.fromRGB(15, 15, 15) or BLUE_TEXT
-        local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-        if hrp then local cl, cd = nil, 999 for _, p in ipairs(workspace.Plots:GetChildren()) do if p:FindFirstChild("FriendPanel") and p.FriendPanel:FindFirstChild("Main") then local d = (hrp.Position - p.FriendPanel.Main.Position).Magnitude if d < cd then cd = d; cl = p end end end if cl then local pp = cl.FriendPanel.Main:FindFirstChild("ProximityPrompt") if pp then fireproximityprompt(pp) end end end
+        if hrp then 
+            local cl, cd = nil, 999 
+            for _, p in ipairs(workspace.Plots:GetChildren()) do 
+                if p:FindFirstChild("FriendPanel") and p.FriendPanel:FindFirstChild("Main") then 
+                    local d = (hrp.Position - p.FriendPanel.Main.Position).Magnitude 
+                    if d < cd then cd = d; cl = p end 
+                end 
+            end 
+            if cl then 
+                local pp = cl.FriendPanel.Main:FindFirstChild("ProximityPrompt") 
+                if pp then fireproximityprompt(pp) end 
+            end 
+        end
     end
     allowToggle.MouseButton1Click:Connect(toggleAllow)
 
     -- ===== RAGDOLL YOURSELF BUTTON =====
     local ragdollYourselfRow = Instance.new("Frame")
-    ragdollYourselfRow.Size = UDim2.new(0.9, 0, 0, 34); ragdollYourselfRow.Position = UDim2.new(0.05, 0, 0, 204); ragdollYourselfRow.BackgroundTransparency = 1; ragdollYourselfRow.Parent = mainFrame
+    ragdollYourselfRow.Size = UDim2.new(0.9, 0, 0, 30); ragdollYourselfRow.Position = UDim2.new(0.05, 0, 0, 182); ragdollYourselfRow.BackgroundTransparency = 1; ragdollYourselfRow.Parent = mainFrame
     local ragdollBtn = Instance.new("TextButton")
-    ragdollBtn.Size = UDim2.new(1, 0, 1, 0); ragdollBtn.BackgroundColor3 = BG_BUTTON; ragdollBtn.Text = "Ragdoll Yourself"; ragdollBtn.TextColor3 = BLUE_TEXT; ragdollBtn.TextSize = 18; ragdollBtn.Font = Enum.Font.GothamBold; ragdollBtn.Parent = ragdollYourselfRow; Instance.new("UICorner", ragdollBtn).CornerRadius = UDim.new(0, 8)
+    ragdollBtn.Size = UDim2.new(1, 0, 1, 0); ragdollBtn.BackgroundColor3 = BG_BUTTON; ragdollBtn.Text = "Ragdoll Yourself"; ragdollBtn.TextColor3 = BLUE_TEXT; ragdollBtn.TextSize = 16; ragdollBtn.Font = Enum.Font.GothamBold; ragdollBtn.Parent = ragdollYourselfRow; Instance.new("UICorner", ragdollBtn).CornerRadius = UDim.new(0, 8)
     local ragdollStroke = Instance.new("UIStroke", ragdollBtn); ragdollStroke.Thickness = 1.5; ragdollStroke.Color = BLUE_MAIN
     ragdollBtn.MouseButton1Click:Connect(function() sendMessage(":ragdoll " .. player.Name) end)
 
