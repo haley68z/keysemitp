@@ -208,12 +208,12 @@ local function startMainScript()
     local speedRow = Instance.new("Frame"); speedRow.Size = UDim2.new(0.9, 0, 0, 34); speedRow.Position = UDim2.new(0.05, 0, 0, 130); speedRow.BackgroundTransparency = 1; speedRow.Parent = mainFrame
     local speedButton = Instance.new("TextButton"); speedButton.Size = UDim2.new(1, -82, 1, 0); speedButton.BackgroundColor3 = BLUE_BRIGHT; speedButton.Text = "Enable Speed"; speedButton.Font = Enum.Font.GothamBold; speedButton.Parent = speedRow; Instance.new("UICorner", speedButton)
     local speedInputBox = Instance.new("TextBox"); speedInputBox.Size = UDim2.new(0, 36, 0, 26); speedInputBox.Position = UDim2.new(1, -70, 0.5, -13); speedInputBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30); speedInputBox.Text = savedSettings and tostring(savedSettings.speedIntensity) or "27"; speedInputBox.TextColor3 = BLUE_TEXT; speedInputBox.Font = Enum.Font.GothamBold; speedInputBox.Parent = speedRow; Instance.new("UICorner", speedInputBox)
-    local speedKeybind = Instance.new("TextButton"); speedKeybind.Size = UDim2.new(0, 26, 0, 22); speedKeybind.Position = UDim2.new(1, -28, 0.5, -11); speedKeybind.BackgroundColor3 = KEYBIND_BG; speedKeybind.Text = keybinds.speed.Name; speedKeybind.Font = Enum.Font.GothamBold; speedKeybind.Parent = speedRow; Instance.new("UICorner", speedKeybind)
+    local speedKeybind = Instance.new("TextButton"); speedKeybind.Size = UDim2.new(0, 26, 0, 22); speedKeybind.Position = UDim2.new(1, -28, 0.5, -11); speedKeybind.BackgroundColor3 = KEYBIND_BG; speedKeybind.Text = keybinds.speed.Name; speedKeybind.TextColor3 = KEYBIND_TEXT; speedKeybind.Font = Enum.Font.GothamBold; speedKeybind.Parent = speedRow; Instance.new("UICorner", speedKeybind)
     speedKeybind.MouseButton1Click:Connect(function() startListening("speed", speedKeybind) end)
 
     local allowRow = Instance.new("Frame"); allowRow.Size = UDim2.new(0.9, 0, 0, 34); allowRow.Position = UDim2.new(0.05, 0, 0, 168); allowRow.BackgroundTransparency = 1; allowRow.Parent = mainFrame
     local allowToggle = Instance.new("TextButton"); allowToggle.Size = UDim2.new(1, -38, 1, 0); allowToggle.BackgroundColor3 = BG_BUTTON; allowToggle.Text = "Disallow"; allowToggle.TextColor3 = BLUE_TEXT; allowToggle.Font = Enum.Font.GothamBold; allowToggle.Parent = allowRow; Instance.new("UICorner", allowToggle)
-    local allowKeybind = Instance.new("TextButton"); allowKeybind.Size = UDim2.new(0, 26, 0, 22); allowKeybind.Position = UDim2.new(1, -28, 0.5, -11); allowKeybind.BackgroundColor3 = KEYBIND_BG; allowKeybind.Text = keybinds.allow.Name; allowKeybind.Font = Enum.Font.GothamBold; allowKeybind.Parent = allowRow; Instance.new("UICorner", allowKeybind)
+    local allowKeybind = Instance.new("TextButton"); allowKeybind.Size = UDim2.new(0, 26, 0, 22); allowKeybind.Position = UDim2.new(1, -28, 0.5, -11); allowKeybind.BackgroundColor3 = KEYBIND_BG; allowKeybind.Text = keybinds.allow.Name; allowKeybind.TextColor3 = KEYBIND_TEXT; allowKeybind.Font = Enum.Font.GothamBold; allowKeybind.Parent = allowRow; Instance.new("UICorner", allowKeybind)
     allowKeybind.MouseButton1Click:Connect(function() startListening("allow", allowKeybind) end)
 
     local ragdollRow = Instance.new("Frame"); ragdollRow.Size = UDim2.new(0.9, 0, 0, 34); ragdollRow.Position = UDim2.new(0.05, 0, 0, 204); ragdollRow.BackgroundTransparency = 1; ragdollRow.Parent = mainFrame
@@ -253,16 +253,9 @@ local function startMainScript()
     ragdollBtn.MouseButton1Click:Connect(function() sendMessage(":ragdoll " .. player.Name) end)
 
     local d_drag, d_start, d_pos
-    mainFrame.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then d_drag=true; d_start=i.Position; d_pos=mainFrame.Position end end)
-    UserInputService.InputChanged:Connect(function(i) if d_drag and i.UserInputType == Enum.UserInputType.MouseMovement then local del = i.Position-d_start; mainFrame.Position = UDim2.new(d_pos.X.Scale, d_pos.X.Offset+del.X, d_pos.Y.Scale, d_pos.Y.Offset+del.Y) end end)
-    UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then d_drag=false; persistSettings() end end)
-
-    local toggleBtn = Instance.new("TextButton"); toggleBtn.Size=UDim2.new(0,45,0,45); toggleBtn.Position=UDim2.new(0,10,0.5,-22); toggleBtn.BackgroundColor3=BG_DARK; toggleBtn.Text="H"; toggleBtn.TextColor3=BLUE_MAIN; toggleBtn.Font=Enum.Font.GothamBold; toggleBtn.TextSize=20; toggleBtn.Parent=screenGui; Instance.new("UICorner",toggleBtn).CornerRadius=UDim.new(1,0); local tSt=Instance.new("UIStroke",toggleBtn); tSt.Color=BLUE_MAIN; tSt.Thickness=2
-    toggleBtn.MouseButton1Click:Connect(function() mainFrame.Visible = not mainFrame.Visible end)
-    local t_drag, t_start, t_pos
-    toggleBtn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then t_drag=true; t_start=i.Position; t_pos=toggleBtn.Position end end)
-    UserInputService.InputChanged:Connect(function(i) if t_drag and i.UserInputType == Enum.UserInputType.MouseMovement then local del = i.Position-t_start; toggleBtn.Position = UDim2.new(t_pos.X.Scale, t_pos.X.Offset+del.X, t_pos.Y.Scale, t_pos.Y.Offset+del.Y) end end)
-    UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then t_drag=false end end)
+    mainFrame.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then d_drag=true; d_start=i.Position; d_pos=mainFrame.Position end end)
+    UserInputService.InputChanged:Connect(function(i) if d_drag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then local del = i.Position-d_start; mainFrame.Position = UDim2.new(d_pos.X.Scale, d_pos.X.Offset+del.X, d_pos.Y.Scale, d_pos.Y.Offset+del.Y) end end)
+    UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then d_drag=false; persistSettings() end end)
 
     local IsStealing = false
     local function doSteal(seq)
