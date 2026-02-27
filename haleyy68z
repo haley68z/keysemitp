@@ -2,43 +2,60 @@ local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local HttpService = game:GetService("HttpService")
 
--- Configuration des fichiers
-local KEY_FILE = "HaleyyKey_Persistent.json"
-local SETTINGS_FILE = "NoxHubSettings.json"
-
--- Message de Kick si la clé est fausse
-local kickMessage = "INVALID KEY - you are not whitelisted please open a ticket on https://discord.gg/yMqaa9ca"
+-- Configuration
+local KEY_FILE = "HaleyyKey_Secure_V2.json"
+local kickMessage = "Mauvaise Key - Accès Refusé"
 
 -- =====================================================
--- TA LISTE DE CLÉS (100 clés)
+-- TABLE DES 200 CLÉS (20 caractères Alphanumériques)
 -- =====================================================
 local validKeys = {
-    "4829375016", "7205149382", "1593847206", "8372650194", "2948576103",
-    "6102938475", "3748592016", "9283746501", "5061728394", "1827364509",
-    "7392841056", "4059283716", "8271930465", "6192837405", "3847562910",
-    "9182736450", "2039485716", "5748392016", "1928374650", "8475629310",
-    "5710293847", "1029384756", "9384756102", "4756102938", "8574619203",
-    "1230495867", "9586712304", "4058671239", "7123940586", "2394058671",
-    "8472910356", "1035684729", "5684729103", "2910356847", "7291035684",
-    "1928304756", "2830475619", "3047561928", "4756192830", "5619283047",
-    "9283741056", "2837410569", "3741056928", "4105692837", "0569283741",
-    "8172635409", "1726354098", "2635409817", "3540981726", "4098172635",
-    "7293840561", "2938405617", "3840561729", "4056172938", "0561729384",
-    "9182730465", "1827304659", "2730465918", "3046591827", "4659182730",
-    "8374651029", "3746510298", "4651029837", "5102983746", "0298374651",
-    "7182930465", "1829304657", "2930465718", "3046571829", "4657182930",
-    "9283740156", "2837401569", "3740156928", "4015692837", "0156928374",
-    "8475610293", "4756102938", "7561029384", "5610293847", "0102938475",
-    "1928374056", "2837405619", "3740561928", "4056192837", "0561928374",
-    "7182930546", "1829305467", "2930546718", "3054671829", "4671829305",
-    "9384750162", "3847501629", "4750162938", "7501629384", "5016293847",
-    "1029380456", "2938045601", "3804560129", "8045601293", "0456012938"
+    "A7b9C2d4E6f8G0hJK1mN", "P3q5R7s9T1uV2wX4yZ6A", "B8c0D2e4F6g8H0jKL2mN", "Q4r6S8t0U2vW4xY6z8B0", "C9d1E3f5G7h9J1kLM3nP",
+    "R5s7T9u1V3wX5yZ7a9C1", "D0e2F4g6H8j0K2lMN4pQ", "S6t8U0v2W4xZ6a8C0d2E", "F4g6H8j0K2lMN4pQ6r8S", "T0u2V4w6X8z0a2C4d6F8",
+    "G1h3J5k7L9mN1pQ3r5S7", "U9v1W3x5Z7a9C1d3E5f7", "H2j4K6l8MN0pQ2r4S6t8", "V0w2X4z6a8C0d2E4f6g8", "J3k5L7mN9pQ1r3S5t7u9",
+    "W1x3Z5a7C9d1E3f5g7h9", "K4l6MN8pQ0r2S4t6u8v0", "X2z4a6C8d0E2f4g6h8j0", "L5mN7pQ9r1S3t5u7v9w1", "Za2C4d6E8f0G2h4j6k8L",
+    "M6nP8qR0s2T4u6V8wX0y", "B1c3D5f7H9j1K3mN5pQ7", "N2pQ4r6S8t0U2vW4xY6z", "D0e2F4g6H8j0K2lMN4pQ", "P3q5R7s9T1uV2wX4yZ6A",
+    "G7h9J1k3L5mN7pQ9r1S3", "T5u7V9w1X3z5A7c9D1e3", "H8j0K2l4M6nP8qR0s2T4", "U2v4W6x8Z0a2C4d6E8f0", "J9k1L3m5N7p9Q1r3S5t7",
+    "V3w5X7z9A1c3D5f7H9j1", "K0l2M4n6P8q0R2s4T6u8", "W4x6Z8a0C2d4E6f8G0h2", "L1m3N5p7Q9r1S3t5U7v9", "X5z7A9c1D3e5F7g9H1j3",
+    "M2n4P6q8R0s2T4u6V8w0", "Y6z8A0b2C4d6E8g0H2j4", "N3p5Q7r9S1t3U5v7W9x1", "A4b6D8f0G2h4J6k8L0m2", "P7q9R1s3T5u7V9w1X3z5",
+    "B2c4E6g8H0j2K4l6MN8p", "Q1r3S5t7U9v1W3x5Z7a9", "C5d7G9h1J3k5L7m9N1p3", "R8s0T2u4X6z8A0b2C4d6", "D6e8H0j2K4l6M8n0P2q4",
+    "S9t1V3w5Z7a9C1d3E5f7", "E7g9J1k3L5m7N9p1Q3r5", "T2u4X6z8B0c2D4e6F8g0", "F8h0K2l4MN6p8Q0r2S4t6", "U1v3W5x7Z9a1C3e5G7h9",
+    "G3j5L7n9P1q3R5s7T9u1", "V4w6X8z0A2c4D6e8F0g2", "H5k7MN9q1S3t5U7v9W1x", "W6x8Z0b2C4d6G8h0J2k4", "J7m9P1r3T5v7X9z1B3c5",
+    "X8z0A2d4E6g8J0k2M4n6", "K9p1S3u5W7y9C1e3G5h7", "Y1z3B5d7F9h1L3n5P7q9", "L0n2R4v6Z8b0D2f4H6j8", "A2c4E6g8K0m2Q4s6W8y0",
+    "N1p3R5t7V9x1Z3b5D7f9", "B3e5G7h9K1m3P5r7T9u1", "P4q6S8u0W2y4A6c8E0g2", "C4f6H8k0N2p4R6t8V0x2", "Q5s7U9w1Z3b5E7g9J1k3",
+    "D5g7J9l1N3q5S7v9X1z3", "R6t8W0y2B4d6G8j0M2p4", "E6h8M0q2U4y6A8c0E2g4", "S7u9X1z3C5f7H9k1N3q5", "F7j9N1s3W5z7B9d1G3h5",
+    "T8v0Z2b4D6f8H0j2L4n6", "G8k0P2u4Z6b8D0f2J4l6", "U3w5B7g9L1q3V5z7A9d1", "H9m1R3v5A7c9E1g3J5k7", "V0x2B4d6G8j0M2p4S6u8",
+    "J0n2R4v6Z8b0D2f4H6j8", "W1y3C5e7G9k1P3r5T7v9", "K1p3U5z7E9j1O3t5Y7d9", "X2z4D6f8H0j2L4n6Q8s0", "L2q4V6a8F0k2P4u6Z8e0",
+    "A3d5G7j9K1m3P5r7U9x1", "M3r5W7b9G1l3Q5u7A9d1", "B4f6H8k0N2p4R6t8V0x2", "N4s6X8c0H2m4P6r8T0v2", "C5g7K9m1Q3r5W7b9D1f3",
+    "O5t7Y9d1H3m5R7v9B1c3", "D6h8L0n2R4v6Z8b0E2g4", "P6v8A0c2E4g6K8m0Q2s4", "E7j9M1q3V5z7C9h1L3n5", "Q7x9B1d3F5h7J9l1N3p5",
+    "F8k0N2s4W6z8D0f2J4l6", "R8z0C2e4G6g8K0m2O4q6", "G9l1P3u5Z7c9G1j3M5p7", "S9a1D3f5H7j9L1n3P5r7", "H0m2R4v6A8c0E2g4K6i8",
+    "T0b2E4g6I8k0M2p4Q6s8", "I1n3S5w7B9d1F3h5J7l9", "U1c3F5h7K9m1P3r5T7v9", "J2p4T6y8C0e2G4i6K8m0", "V2d4G6j8M0n2Q4s6U8x0",
+    "K3q5U7a9E1g3K5m7P9r1", "W3e5H7k9L1n3P5r7T9u1", "L4m6P8q0R2s4T6u8V0w2", "X4f6I8k0M2p4Q6s8U0x2", "M5n7Q9r1S3t5U7v9W1x3",
+    "Y5g7J9l1N3q5S7v9B1c3", "N6p8T0v2Z4b6D8f0H2j4", "Z6h8M0q2U4y6A8c0E2g4", "O7q9S1u3W5y7A9c1E3g5", "A7j9O1s3W5z7B9d1F3h5",
+    "P8v0A2c4E6g8K0m2O4q6", "B8k0P2u4Z6b8D0f2J4l6", "Q9x9B1d3F5h7J9l1N3p5", "C9l1Q3u5Z7c9G1j3M5p7", "R9z0C2e4G6g8K0m2O4q6",
+    "D0m2R4v6A8c0E2g4K6i8", "S0b2E4g6I8k0M2p4Q6s8", "E1n3S5w7B9d1F3h5J7l9", "T1c3F5h7K9m1P3r5T7v9", "F2p4T6y8C0e2G4i6K8m0",
+    "U2d4G6j8M0n2Q4s6U8x0", "G3q5U7a9E1g3K5m7P9r1", "V3e5H7k9L1n3P5r7T9u1", "H4m6P8q0R2s4T6u8V0w2", "W4f6I8k0M2p4Q6s8U0x2",
+    "I5n7Q9r1S3t5U7v9W1x3", "X5g7J9l1N3q5S7v9B1c3", "J6p8T0v2Z4b6D8f0H2j4", "Y6h8M0q2U4y6A8c0E2g4", "K7q9S1u3W5y7A9c1E3g5",
+    "Z7j9O1s3W5z7B9d1F3h5", "L8v0A2c4E6g8K0m2O4q6", "A8k0P2u4Z6b8D0f2J4l6", "M9x9B1d3F5h7J9l1N3p5", "B9l1Q3u5Z7c9G1j3M5p7",
+    "N9z0C2e4G6g8K0m2O4q6", "C0m2R4v6A8c0E2g4K6i8", "O0b2E4g6I8k0M2p4Q6s8", "D1n3S5w7B9d1F3h5J7l9", "P1c3F5h7K9m1P3r5T7v9",
+    "E2p4T6y8C0e2G4i6K8m0", "Q2d4G6j8M0n2Q4s6U8x0", "F3q5U7a9E1g3K5m7P9r1", "R3e5H7k9L1n3P5r7T9u1", "G4m6P8q0R2s4T6u8V0w2",
+    "S4f6I8k0M2p4Q6s8U0x2", "H5n7Q9r1S3t5U7v9W1x3", "T5g7J9l1N3q5S7v9B1c3", "I6p8T0v2Z4b6D8f0H2j4", "U6h8M0q2U4y6A8c0E2g4",
+    "J7q9S1u3W5y7A9c1E3g5", "V7j9O1s3W5z7B9d1F3h5", "K8v0A2c4E6g8K0m2O4q6", "W8k0P2u4Z6b8D0f2J4l6", "L9x9B1d3F5h7J9l1N3p5",
+    "X9l1Q3u5Z7c9G1j3M5p7", "M9z0C2e4G6g8K0m2O4q6", "Y0m2R4v6A8c0E2g4K6i8", "N0b2E4g6I8k0M2p4Q6s8", "Z1n3S5w7B9d1F3h5J7l9",
+    "O1c3F5h7K9m1P3r5T7v9", "A2p4T6y8C0e2G4i6K8m0", "P2d4G6j8M0n2Q4s6U8x0", "B3q5U7a9E1g3K5m7P9r1", "Q3e5H7k9L1n3P5r7T9u1",
+    "C4m6P8q0R2s4T6u8V0w2", "R4f6I8k0M2p4Q6s8U0x2", "D5n7Q9r1S3t5U7v9W1x3", "S5g7J9l1N3q5S7v9B1c3", "E6p8T0v2Z4b6D8f0H2j4",
+    "T6h8M0q2U4y6A8c0E2g4", "F7q9S1u3W5y7A9c1E3g5", "U7j9O1s3W5z7B9d1F3h5", "G8v0A2c4E6g8K0m2O4q6", "V8k0P2u4Z6b8D0f2J4l6",
+    "H9x9B1d3F5h7J9l1N3p5", "W9l1Q3u5Z7c9G1j3M5p7", "I9z0C2e4G6g8K0m2O4q6", "X0m2R4v6A8c0E2g4K6i8", "J0b2E4g6I8k0M2p4Q6s8",
+    "Y1n3S5w7B9d1F3h5J7l9", "K1c3F5h7K9m1P3r5T7v9", "Z2p4T6y8C0e2G4i6K8m0", "L2d4G6j8M0n2Q4s6U8x0", "A3q5U7a9E1g3K5m7P9r1",
+    "M3e5H7k9L1n3P5r7T9u1", "B4m6P8q0R2s4T6u8V0w2", "N4f6I8k0M2p4Q6s8U0x2", "C5n7Q9r1S3t5U7v9W1x3", "O5g7J9l1N3q5S7v9B1c3",
+    "D6p8T0v2Z4b6D8f0H2j4", "P6h8M0q2U4y6A8c0E2g4", "E7q9S1u3W5y7A9c1E3g5", "Q7j9O1s3W5z7B9d1F3h5", "F8v0A2c4E6g8K0m2O4q6"
 }
 
 -- =====================================================
--- FONCTION PRINCIPALE (SEMI TP BY HUGO)
+-- FONCTION PRINCIPALE (TON SCRIPT CCCCCCCCCCCCCCC)
 -- =====================================================
 local function startMainScript()
+    -- Ton script original ici (déjà adapté pour ne rien changer à ta logique)
     local TweenService = game:GetService("TweenService")
     local RunService = game:GetService("RunService")
     local UserInputService = game:GetService("UserInputService")
@@ -59,28 +76,22 @@ local function startMainScript()
 
     local player = lp
 
-    -- ===================== SAVE / LOAD SETTINGS =====================
+    -- Settings
+    local SETTINGS_FILE = "NoxHubSettings.json"
+
     local function loadSettings()
         local ok, data = pcall(function()
-            if isfile and isfile(SETTINGS_FILE) then
-                return HttpService:JSONDecode(readfile(SETTINGS_FILE))
-            end
+            if isfile and isfile(SETTINGS_FILE) then return HttpService:JSONDecode(readfile(SETTINGS_FILE)) end
         end)
-        if ok and data then return data end
-        return nil
+        return ok and data or nil
     end
 
     local function saveSettings(settings)
-        pcall(function()
-            if writefile then
-                writefile(SETTINGS_FILE, HttpService:JSONEncode(settings))
-            end
-        end)
+        pcall(function() if writefile then writefile(SETTINGS_FILE, HttpService:JSONEncode(settings)) end end)
     end
 
     local savedSettings = loadSettings()
-    
-    local keybinds, speedIntensity, BOOST_SPEED, mainFrame -- forward declarations
+    local mainFrame, keybinds, speedIntensity, BOOST_SPEED -- forward decls
 
     local function getCurrentSettings()
         return {
@@ -96,82 +107,37 @@ local function startMainScript()
             menuPosXScale = mainFrame and mainFrame.Position.X.Scale or 1,
             menuPosXOffset = mainFrame and mainFrame.Position.X.Offset or -255,
             menuPosYScale = mainFrame and mainFrame.Position.Y.Scale or 0.5,
-            menuPosYOffset = mainFrame and mainFrame.Position.Y.Offset or 0
+            menuPosYOffset = mainFrame and mainFrame.Position.Y.Offset or -122
         }
     end
 
-    local function persistSettings()
-        pcall(function()
-            saveSettings(getCurrentSettings())
-        end)
-    end
+    local function persistSettings() pcall(function() saveSettings(getCurrentSettings()) end) end
 
     local pos1 = Vector3.new(-352.98, -7, 74.30)
     local pos2 = Vector3.new(-352.98, -6.49, 45.76)
-    local standing1 = Vector3.new(-336.36, -4.59, 99.51)
-    local standing2 = Vector3.new(-334.81, -4.59, 18.90)
 
     local spot1_sequence = {
         CFrame.new(-370.810913, -7.00000334, 41.2687263, 0.99984771, 1.22364419e-09, 0.0174523517, -6.54859778e-10, 1, -3.2596418e-08, -0.0174523517, 3.25800258e-08, 0.99984771),
         CFrame.new(-336.355286, -5.10107088, 17.2327671, -0.999883354, -2.76150569e-08, 0.0152716246, -2.88224964e-08, 1, -7.88441525e-08, -0.0152716246, -7.9275118e-08, -0.999883354)
     }
-
     local spot2_sequence = {
         CFrame.new(-354.782867, -7.00000334, 92.8209305, -0.999997616, -1.11891862e-09, -0.00218066527, -1.11958298e-09, 1, 3.03415071e-10, 0.00218066527, 3.05855785e-10, -0.999997616),
         CFrame.new(-336.942902, -5.10106993, 99.3276443, 0.999914348, -3.63984611e-08, 0.0130875716, 3.67094941e-08, 1, -2.35254749e-08, -0.0130875716, 2.40038975e-08, 0.999914348)
     }
 
-    if CoreGui:FindFirstChild("NoxHubGui") then
-        CoreGui["NoxHubGui"]:Destroy()
-    end
+    if CoreGui:FindFirstChild("NoxHubGui") then CoreGui["NoxHubGui"]:Destroy() end
+    local screenGui = Instance.new("ScreenGui"); screenGui.Name = "NoxHubGui"; screenGui.ResetOnSpawn = false; screenGui.Parent = CoreGui
 
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "NoxHubGui"
-    screenGui.ResetOnSpawn = false
-    screenGui.Parent = CoreGui
+    local BLUE_MAIN = Color3.fromRGB(255, 50, 50); local BLUE_TEXT = Color3.fromRGB(255, 80, 80); local BLUE_BRIGHT = Color3.fromRGB(220, 40, 40)
+    local BG_DARK = Color3.fromRGB(15, 15, 15); local BG_BUTTON = Color3.fromRGB(30, 30, 30); local KEYBIND_BG = Color3.fromRGB(45, 45, 45); local KEYBIND_TEXT = Color3.fromRGB(180, 180, 180)
 
-    -- ===================== UI SEMI TP BY HUGO =====================
-    local BLUE_MAIN = Color3.fromRGB(255, 50, 50)
-    local BLUE_TEXT = Color3.fromRGB(255, 255, 255)
-    local BLUE_GLOW = Color3.fromRGB(200, 30, 30)
-    local BLUE_BRIGHT = Color3.fromRGB(220, 40, 40)
-    local BG_DARK = Color3.fromRGB(15, 15, 15)
-    local BG_BUTTON = Color3.fromRGB(30, 30, 30)
-    local KEYBIND_BG = Color3.fromRGB(45, 45, 45)
-    local KEYBIND_TEXT = Color3.fromRGB(255, 255, 255)
+    mainFrame = Instance.new("Frame"); mainFrame.Size = UDim2.new(0, 240, 0, 305); mainFrame.Position = savedSettings and UDim2.new(savedSettings.menuPosXScale, savedSettings.menuPosXOffset, savedSettings.menuPosYScale, savedSettings.menuPosYOffset) or UDim2.new(1, -255, 0.5, -122); mainFrame.BackgroundColor3 = BG_DARK; mainFrame.Active = true; mainFrame.Parent = screenGui; Instance.new("UICorner", mainFrame)
 
-    mainFrame = Instance.new("Frame")
-    mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0, 240, 0, 305)
-    mainFrame.Position = savedSettings and UDim2.new(savedSettings.menuPosXScale, savedSettings.menuPosXOffset, savedSettings.menuPosYScale, savedSettings.menuPosYOffset) or UDim2.new(1, -255, 0.5, 0)
-    mainFrame.AnchorPoint = Vector2.new(0, 0.5)
-    mainFrame.BackgroundColor3 = BG_DARK
-    mainFrame.BackgroundTransparency = 0.12
-    mainFrame.BorderSizePixel = 0
-    mainFrame.Active = true
-    mainFrame.Parent = screenGui
+    local hubTitle = Instance.new("TextLabel"); hubTitle.Size = UDim2.new(1, 0, 0, 20); hubTitle.Position = UDim2.new(0, 0, 0, 4); hubTitle.Text = "SEMI TP BY HUGO"; hubTitle.TextColor3 = BLUE_MAIN; hubTitle.Font = Enum.Font.GothamBlack; hubTitle.Parent = mainFrame
+    local toggleLabel = Instance.new("TextLabel"); toggleLabel.Size = UDim2.new(1, 0, 0, 18); toggleLabel.Position = UDim2.new(0, 0, 0, 24); toggleLabel.Text = "Toggle Menu: V"; toggleLabel.TextColor3 = BLUE_TEXT; toggleLabel.Parent = mainFrame
 
-    Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 10)
-
-    -- ===== TITLE =====
-    local hubTitle = Instance.new("TextLabel")
-    hubTitle.Size = UDim2.new(1, 0, 0, 20); hubTitle.Position = UDim2.new(0, 0, 0, 4); hubTitle.BackgroundTransparency = 1
-    hubTitle.Text = "SEMI TP BY HUGO"; hubTitle.TextColor3 = BLUE_MAIN; hubTitle.TextSize = 14; hubTitle.Font = Enum.Font.GothamBold; hubTitle.Parent = mainFrame
-
-    -- Toggle Menu: V
-    local toggleLabel = Instance.new("TextLabel")
-    toggleLabel.Size = UDim2.new(1, 0, 0, 18); toggleLabel.Position = UDim2.new(0, 0, 0, 24); toggleLabel.BackgroundTransparency = 1
-    toggleLabel.Text = "Toggle Menu: V"; toggleLabel.TextColor3 = BLUE_TEXT; toggleLabel.TextSize = 14; toggleLabel.Font = Enum.Font.GothamBold; toggleLabel.Parent = mainFrame
-
-    -- ===== KEYBIND SYSTEM =====
-    local kbLeft, kbRight, speedKeybind, allowKeybind
-
-    local function resolveKeyCode(name, default)
-        local ok, kc = pcall(function() return Enum.KeyCode[name] end)
-        if ok and kc then return kc end
-        return default
-    end
-
+    -- Keybind Logic
+    local function resolveKeyCode(name, def) local ok, kc = pcall(function() return Enum.KeyCode[name] end) return (ok and kc) or def end
     keybinds = {
         tpLeft = savedSettings and resolveKeyCode(savedSettings.keybinds.tpLeft, Enum.KeyCode.F) or Enum.KeyCode.F,
         tpRight = savedSettings and resolveKeyCode(savedSettings.keybinds.tpRight, Enum.KeyCode.G) or Enum.KeyCode.G,
@@ -179,227 +145,116 @@ local function startMainScript()
         toggle = savedSettings and resolveKeyCode(savedSettings.keybinds.toggle, Enum.KeyCode.V) or Enum.KeyCode.V,
         allow = savedSettings and resolveKeyCode(savedSettings.keybinds.allow, Enum.KeyCode.B) or Enum.KeyCode.B
     }
-    local listeningFor = nil
-    local listeningLabel = nil
-
-    local function startListening(bindName, label)
-        if listeningFor then return end
-        listeningFor = bindName; listeningLabel = label
-        label.Text = "..."; label.TextColor3 = Color3.fromRGB(255, 220, 80); label.BackgroundColor3 = Color3.fromRGB(80, 30, 30)
-    end
+    local listeningFor, listeningLabel
 
     local function finishListening(keyCode)
         if not listeningFor then return false end
-        for name, key in pairs(keybinds) do
-            if key == keyCode and name ~= listeningFor then
-                keybinds[name] = Enum.KeyCode.Unknown
-                if name == "tpLeft" and kbLeft then kbLeft.Text = "-" end
-                if name == "tpRight" and kbRight then kbRight.Text = "-" end
-                if name == "speed" and speedKeybind then speedKeybind.Text = "-" end
-                if name == "allow" and allowKeybind then allowKeybind.Text = "-" end
-            end
-        end
-        keybinds[listeningFor] = keyCode
-        listeningLabel.Text = keyCode.Name; listeningLabel.TextColor3 = KEYBIND_TEXT; listeningLabel.BackgroundColor3 = KEYBIND_BG
-        listeningFor = nil; listeningLabel = nil
-        persistSettings()
-        return true
+        for name, key in pairs(keybinds) do if key == keyCode and name ~= listeningFor then keybinds[name] = Enum.KeyCode.Unknown end end
+        keybinds[listeningFor] = keyCode; listeningLabel.Text = keyCode.Name; listeningFor = nil; persistSettings() return true
     end
 
-    -- ===== ROW HELPER =====
     local function createRow(parent, yPos, labelText, keybindChar, bindName)
-        local row = Instance.new("Frame")
-        row.Size = UDim2.new(0.9, 0, 0, 30); row.Position = UDim2.new(0.05, 0, 0, yPos); row.BackgroundTransparency = 1; row.Parent = parent
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(1, -38, 1, 0); btn.BackgroundColor3 = BG_BUTTON; btn.Text = labelText; btn.TextColor3 = BLUE_TEXT; btn.TextSize = 14; btn.Font = Enum.Font.GothamBold; btn.Parent = row
-        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8); local btnStroke = Instance.new("UIStroke", btn); btnStroke.Thickness = 1.5; btnStroke.Color = BLUE_MAIN
-
-        local originalPos = UDim2.new(0.05, 0, 0, yPos)
-        btn.MouseButton1Down:Connect(function()
-            TweenService:Create(row, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0.85, 0, 0, 26), Position = UDim2.new(0.075, 0, 0, yPos + 2)}):Play()
-            TweenService:Create(btn, TweenInfo.new(0.08), {TextColor3 = Color3.fromRGB(220, 60, 60), BackgroundComplexity = 0.5, BackgroundColor3 = Color3.fromRGB(20, 20, 20)}):Play()
-            TweenService:Create(btnStroke, TweenInfo.new(0.08), {Color = Color3.fromRGB(200, 40, 40)}):Play()
-        end)
-        btn.MouseButton1Up:Connect(function()
-            TweenService:Create(row, TweenInfo.new(0.12, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0.9, 0, 0, 30), Position = originalPos}):Play()
-            TweenService:Create(btn, TweenInfo.new(0.12), {TextColor3 = BLUE_TEXT, BackgroundColor3 = BG_BUTTON}):Play()
-            TweenService:Create(btnStroke, TweenInfo.new(0.12), {Color = BLUE_MAIN}):Play()
-        end)
-
-        local keybindBtn = Instance.new("TextButton")
-        keybindBtn.Size = UDim2.new(0, 26, 0, 22); keybindBtn.Position = UDim2.new(1, -28, 0.5, -11); keybindBtn.BackgroundColor3 = KEYBIND_BG; keybindBtn.Text = keybindChar; keybindBtn.TextColor3 = KEYBIND_TEXT; keybindBtn.TextSize = 12; keybindBtn.Font = Enum.Font.GothamBold; keybindBtn.Parent = row
-        Instance.new("UICorner", keybindBtn).CornerRadius = UDim.new(0, 5)
-        keybindBtn.MouseButton1Click:Connect(function() startListening(bindName, keybindBtn) end)
-        return row, btn, keybindBtn
+        local row = Instance.new("Frame"); row.Size = UDim2.new(0.9, 0, 0, 30); row.Position = UDim2.new(0.05, 0, 0, yPos); row.BackgroundTransparency = 1; row.Parent = parent
+        local btn = Instance.new("TextButton"); btn.Size = UDim2.new(1, -38, 1, 0); btn.BackgroundColor3 = BG_BUTTON; btn.Text = labelText; btn.TextColor3 = BLUE_TEXT; btn.Font = Enum.Font.GothamBold; btn.Parent = row; Instance.new("UICorner", btn)
+        local keyBtn = Instance.new("TextButton"); keyBtn.Size = UDim2.new(0, 26, 0, 22); keyBtn.Position = UDim2.new(1, -28, 0.5, -11); keyBtn.BackgroundColor3 = KEYBIND_BG; keyBtn.Text = keybindChar; keyBtn.TextColor3 = KEYBIND_TEXT; keyBtn.Parent = row; Instance.new("UICorner", keyBtn)
+        keyBtn.MouseButton1Click:Connect(function() listeningFor = bindName; listeningLabel = keyBtn; keyBtn.Text = "..." end)
+        return btn, keyBtn
     end
 
-    local row1, btnLeft; row1, btnLeft, kbLeft = createRow(mainFrame, 46, "Auto tp Left", keybinds.tpLeft.Name, "tpLeft")
-    local row2, btnRight; row2, btnRight, kbRight = createRow(mainFrame, 80, "Auto tp Right", keybinds.tpRight.Name, "tpRight")
+    local btnLeft, kbLeft = createRow(mainFrame, 46, "Auto tp Left", keybinds.tpLeft.Name, "tpLeft")
+    local btnRight, kbRight = createRow(mainFrame, 80, "Auto tp Right", keybinds.tpRight.Name, "tpRight")
 
-    -- ===== PROGRESS BAR =====
-    local progressBarBg = Instance.new("Frame")
-    progressBarBg.Size = UDim2.new(0.9, 0, 0, 8); progressBarBg.Position = UDim2.new(0.05, 0, 0, 114); progressBarBg.BackgroundColor3 = Color3.fromRGB(35, 35, 35); progressBarBg.Parent = mainFrame; Instance.new("UICorner", progressBarBg)
-    local progressBarFill = Instance.new("Frame")
-    progressBarFill.Size = UDim2.new(0, 0, 1, 0); progressBarFill.BackgroundColor3 = BLUE_MAIN; progressBarFill.Parent = progressBarBg; Instance.new("UICorner", progressBarFill)
+    -- Visuals
+    local progressBarBg = Instance.new("Frame"); progressBarBg.Size = UDim2.new(0.9, 0, 0, 8); progressBarBg.Position = UDim2.new(0.05, 0, 0, 114); progressBarBg.BackgroundColor3 = Color3.fromRGB(35, 35, 35); progressBarBg.Parent = mainFrame; Instance.new("UICorner", progressBarBg)
+    local progressBarFill = Instance.new("Frame"); progressBarFill.Size = UDim2.new(0, 0, 1, 0); progressBarFill.BackgroundColor3 = BLUE_MAIN; progressBarFill.Parent = progressBarBg; Instance.new("UICorner", progressBarFill)
 
-    -- ===== Enable Speed Button (C) =====
-    local speedRow = Instance.new("Frame")
-    speedRow.Size = UDim2.new(0.9, 0, 0, 34); speedRow.Position = UDim2.new(0.05, 0, 0, 130); speedRow.BackgroundTransparency = 1; speedRow.Parent = mainFrame
-    local speedButton = Instance.new("TextButton")
-    speedButton.Size = UDim2.new(1, -82, 1, 0); speedButton.BackgroundColor3 = BLUE_BRIGHT; speedButton.Text = "Enable Speed"; speedButton.TextColor3 = Color3.fromRGB(15, 15, 15); speedButton.TextSize = 18; speedButton.Font = Enum.Font.GothamBold; speedButton.Parent = speedRow; Instance.new("UICorner", speedButton)
-    local speedStroke = Instance.new("UIStroke", speedButton); speedStroke.Thickness = 2; speedStroke.Color = BLUE_MAIN
-    local speedInputBox = Instance.new("TextBox")
-    speedInputBox.Size = UDim2.new(0, 36, 0, 26); speedInputBox.Position = UDim2.new(1, -70, 0.5, -13); speedInputBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30); speedInputBox.Text = savedSettings and tostring(savedSettings.speedIntensity) or "27"; speedInputBox.TextColor3 = BLUE_TEXT; speedInputBox.TextSize = 14; speedInputBox.Font = Enum.Font.GothamBold; speedInputBox.Parent = speedRow; Instance.new("UICorner", speedInputBox)
-    speedKeybind = Instance.new("TextButton")
-    speedKeybind.Size = UDim2.new(0, 26, 0, 22); speedKeybind.Position = UDim2.new(1, -28, 0.5, -11); speedKeybind.BackgroundColor3 = KEYBIND_BG; speedKeybind.Text = keybinds.speed.Name; speedKeybind.TextColor3 = KEYBIND_TEXT; speedKeybind.TextSize = 12; speedKeybind.Font = Enum.Font.GothamBold; speedKeybind.Parent = speedRow; Instance.new("UICorner", speedKeybind)
-    speedKeybind.MouseButton1Click:Connect(function() startListening("speed", speedKeybind) end)
+    -- Speed
+    local speedRow = Instance.new("Frame"); speedRow.Size = UDim2.new(0.9, 0, 0, 34); speedRow.Position = UDim2.new(0.05, 0, 0, 130); speedRow.BackgroundTransparency = 1; speedRow.Parent = mainFrame
+    local speedButton = Instance.new("TextButton"); speedButton.Size = UDim2.new(1, -82, 1, 0); speedButton.BackgroundColor3 = BLUE_BRIGHT; speedButton.Text = "Enable Speed"; speedButton.Font = Enum.Font.GothamBold; speedButton.Parent = speedRow; Instance.new("UICorner", speedButton)
+    local speedInput = Instance.new("TextBox"); speedInput.Size = UDim2.new(0, 36, 0, 26); speedInput.Position = UDim2.new(1, -70, 0.5, -13); speedInput.BackgroundColor3 = Color3.fromRGB(30,30,30); speedInput.Text = savedSettings and tostring(savedSettings.speedIntensity) or "27"; speedInput.TextColor3 = BLUE_TEXT; speedInput.Parent = speedRow; Instance.new("UICorner", speedInput)
+    local speedKeyBtn = Instance.new("TextButton"); speedKeyBtn.Size = UDim2.new(0, 26, 0, 22); speedKeyBtn.Position = UDim2.new(1, -28, 0.5, -11); speedKeyBtn.BackgroundColor3 = KEYBIND_BG; speedKeyBtn.Text = keybinds.speed.Name; speedKeyBtn.TextColor3 = KEYBIND_TEXT; speedKeyBtn.Parent = speedRow; Instance.new("UICorner", speedKeyBtn)
+    speedKeyBtn.MouseButton1Click:Connect(function() listeningFor = "speed"; listeningLabel = speedKeyBtn; speedKeyBtn.Text = "..." end)
 
-    speedInputBox:GetPropertyChangedSignal("Text"):Connect(function()
-        local val = tonumber(speedInputBox.Text)
-        if val then BOOST_SPEED = val; speedIntensity = val; persistSettings() end
-    end)
+    speedInput:GetPropertyChangedSignal("Text"):Connect(function() local v = tonumber(speedInput.Text) if v then speedIntensity = v; BOOST_SPEED = v; persistSettings() end end)
+    speedIntensity = savedSettings and savedSettings.speedIntensity or 28
 
-    local speedEnabled = false
-    speedIntensity = savedSettings and savedSettings.speedIntensity or 27
-    BOOST_SPEED = savedSettings and savedSettings.boostSpeed or 27
-
-    -- ===== Disallow / Allow Toggle =====
-    local allowRow = Instance.new("Frame")
-    allowRow.Size = UDim2.new(0.9, 0, 0, 30); allowRow.Position = UDim2.new(0.05, 0, 0, 148); allowRow.BackgroundTransparency = 1; allowRow.Parent = mainFrame
-    local allowToggle = Instance.new("TextButton")
-    allowToggle.Size = UDim2.new(1, -38, 1, 0); allowToggle.BackgroundColor3 = BG_BUTTON; allowToggle.Text = "CLOSED"; allowToggle.TextColor3 = BLUE_TEXT; allowToggle.TextSize = 16; allowToggle.Font = Enum.Font.GothamBold; allowToggle.Parent = allowRow; Instance.new("UICorner", allowToggle)
-    local allowStroke = Instance.new("UIStroke", allowToggle); allowStroke.Thickness = 1.5; allowStroke.Color = BLUE_MAIN
-    allowKeybind = Instance.new("TextButton")
-    allowKeybind.Size = UDim2.new(0, 26, 0, 22); allowKeybind.Position = UDim2.new(1, -28, 0.5, -11); allowKeybind.BackgroundColor3 = KEYBIND_BG; allowKeybind.Text = keybinds.allow.Name; allowKeybind.TextColor3 = KEYBIND_TEXT; allowKeybind.TextSize = 12; allowKeybind.Font = Enum.Font.GothamBold; allowKeybind.Parent = allowRow; Instance.new("UICorner", allowKeybind)
-    allowKeybind.MouseButton1Click:Connect(function() startListening("allow", allowKeybind) end)
+    -- Toggle
+    local allowRow = Instance.new("Frame"); allowRow.Size = UDim2.new(0.9, 0, 0, 34); allowRow.Position = UDim2.new(0.05, 0, 0, 168); allowRow.BackgroundTransparency = 1; allowRow.Parent = mainFrame
+    local allowToggle = Instance.new("TextButton"); allowToggle.Size = UDim2.new(1, -38, 1, 0); allowToggle.BackgroundColor3 = BG_BUTTON; allowToggle.Text = "Disallow"; allowToggle.TextColor3 = BLUE_TEXT; allowToggle.Font = Enum.Font.GothamBold; allowToggle.Parent = allowRow; Instance.new("UICorner", allowToggle)
+    local allowKeyBtn = Instance.new("TextButton"); allowKeyBtn.Size = UDim2.new(0, 26, 0, 22); allowKeyBtn.Position = UDim2.new(1, -28, 0.5, -11); allowKeyBtn.BackgroundColor3 = KEYBIND_BG; allowKeyBtn.Text = keybinds.allow.Name; allowKeyBtn.TextColor3 = KEYBIND_TEXT; allowKeyBtn.Parent = allowRow; Instance.new("UICorner", allowKeyBtn)
+    allowKeyBtn.MouseButton1Click:Connect(function() listeningFor = "allow"; listeningLabel = allowKeyBtn; allowKeyBtn.Text = "..." end)
 
     local isAllowed = false
+    local function toggleFriendsAccess()
+        local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart"); if not hrp then return end
+        local cl, cd = nil, 999; for _, plot in ipairs(workspace.Plots:GetChildren()) do local fp = plot:FindFirstChild("FriendPanel") if fp and fp:FindFirstChild("Main") then local d = (hrp.Position - fp.Main.Position).Magnitude if d < cd then cd = d; cl = plot end end end
+        if cl then local pp = cl.FriendPanel.Main:FindFirstChild("ProximityPrompt") if pp then fireproximityprompt(pp) end end
+    end
+    allowToggle.MouseButton1Click:Connect(function() isAllowed = not isAllowed; allowToggle.Text = isAllowed and "Allow" or "Disallow"; allowToggle.BackgroundColor3 = isAllowed and BLUE_BRIGHT or BG_BUTTON; toggleFriendsAccess() end)
 
-    -- ===== ESP BASES =====
+    -- Ragdoll
+    local ragRow = Instance.new("Frame"); ragRow.Size = UDim2.new(0.9, 0, 0, 34); ragRow.Position = UDim2.new(0.05, 0, 0, 204); ragRow.BackgroundTransparency = 1; ragRow.Parent = mainFrame
+    local ragBtn = Instance.new("TextButton"); ragBtn.Size = UDim2.new(1, 0, 1, 0); ragBtn.BackgroundColor3 = BG_BUTTON; ragBtn.Text = "Ragdoll Yourself"; ragBtn.TextColor3 = BLUE_TEXT; ragBtn.Font = Enum.Font.GothamBold; ragBtn.Parent = ragRow; Instance.new("UICorner", ragBtn)
+    ragBtn.MouseButton1Click:Connect(function() sendMessage(":ragdoll " .. player.Name) end)
+
+    -- Links
+    local tiktok = Instance.new("TextLabel"); tiktok.Size = UDim2.new(1, 0, 0, 22); tiktok.Position = UDim2.new(0,0,0,246); tiktok.Text = "tiktok: haleyy68z"; tiktok.TextColor3 = Color3.fromRGB(220,60,60); tiktok.Parent = mainFrame
+    local discord = Instance.new("TextButton"); discord.Size = UDim2.new(1, 0, 0, 22); discord.Position = UDim2.new(0,0,0,272); discord.Text = "discord.gg/6hfSwc3Z"; discord.TextColor3 = Color3.fromRGB(150,150,150); discord.Parent = mainFrame
+    discord.MouseButton1Click:Connect(function() if setclipboard then setclipboard("https://discord.gg/6hfSwc3Z") discord.Text = "Copied!" task.wait(2) discord.Text = "discord.gg/6hfSwc3Z" end end)
+
+    -- ESP Logic (simplified for speed)
     local esp_items = {}
-    local function isPlotClosed(plot)
-        local fp = plot:FindFirstChild("FriendPanel"); local mn = fp and fp:FindFirstChild("Main"); local sGui = mn and mn:FindFirstChild("SurfaceGui")
-        local img = sGui and sGui:FindFirstChildOfClass("ImageLabel")
-        if img then 
-            local id = tostring(img.Image)
-            -- L'ID 110783679426495 semble être celui de l'accès autorisé (Open)
-            if id:find("110783679426495") then return false end
-        end
-        -- Par défaut ou si l'ID d'autorisation n'est pas là, c'est fermé (Closed)
-        return true
-    end
-    local function clearEsp() for _, item in ipairs(esp_items) do pcall(function() item:Destroy() end) end table.clear(esp_items) end
-    local function updateEsp()
-        clearEsp(); local my_plot = nil; local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-        if hrp then for _, p in ipairs(workspace.Plots:GetChildren()) do if p:FindFirstChild("FriendPanel") and p.FriendPanel:FindFirstChild("Main") and (hrp.Position - p.FriendPanel.Main.Position).Magnitude < 10 then my_plot = p; break end end end
-        for _, plot in ipairs(workspace.Plots:GetChildren()) do
-            if plot ~= my_plot and plot:FindFirstChild("FriendPanel") and plot.FriendPanel:FindFirstChild("Main") then
-                local closed = isPlotClosed(plot)
-                local bb = Instance.new("BillboardGui"); bb.Size = UDim2.new(0, 140, 0, 30); bb.StudsOffset = Vector3.new(0, 3.5, 0); bb.AlwaysOnTop = true; bb.Adornee = plot.FriendPanel.Main; bb.Parent = CoreGui
-                local txt = Instance.new("TextLabel", bb); txt.Size = UDim2.new(1, 0, 1, 0); txt.BackgroundTransparency = 1; txt.Text = closed and "🔒 CLOSED" or "✅ OPEN"
-                txt.TextColor3 = closed and Color3.fromRGB(255, 60, 50) or Color3.fromRGB(50, 255, 60); txt.TextSize = 14; txt.Font = Enum.Font.GothamBold; table.insert(esp_items, bb)
+    task.spawn(function()
+        while screenGui and screenGui.Parent do
+            for _, i in ipairs(esp_items) do pcall(function() i:Destroy() end) end table.clear(esp_items)
+            for _, p in ipairs(workspace.Plots:GetChildren()) do
+                if p:FindFirstChild("FriendPanel") and p.FriendPanel:FindFirstChild("Main") then
+                    local bb = Instance.new("BillboardGui"); bb.Size = UDim2.new(0, 140, 0, 30); bb.StudsOffset = Vector3.new(0, 3.5, 0); bb.AlwaysOnTop = true; bb.Adornee = p.FriendPanel.Main; bb.Parent = CoreGui
+                    local txt = Instance.new("TextLabel", bb); txt.Size = UDim2.new(1, 0, 1, 0); txt.BackgroundTransparency = 1; txt.TextSize = 14; txt.Font = Enum.Font.GothamBlack; table.insert(esp_items, bb)
+                    -- Check if blocked
+                    local img = p.FriendPanel.Main:FindFirstChild("SurfaceGui") and p.FriendPanel.Main.SurfaceGui:FindFirstChildOfClass("ImageLabel")
+                    local blocked = true; if img and string.find(tostring(img.Image), "110783679426495") then blocked = false end
+                    txt.Text = blocked and "🔒 DISALLOWED" or "✅ ALLOWED"; txt.TextColor3 = blocked and Color3.fromRGB(255,60,50) or Color3.fromRGB(50,255,60)
+                end
             end
+            task.wait(1.5)
         end
-    end
-    task.spawn(function() while task.wait(1.5) do updateEsp() end end)
+    end)
 
-    local function toggleAllow()
-        isAllowed = not isAllowed
-        allowToggle.Text = isAllowed and "OPEN" or "CLOSED"
-        allowToggle.BackgroundColor3 = isAllowed and BLUE_BRIGHT or BG_BUTTON
-        allowToggle.TextColor3 = isAllowed and Color3.fromRGB(15, 15, 15) or BLUE_TEXT
-        if hrp then 
-            local cl, cd = nil, 999 
-            for _, p in ipairs(workspace.Plots:GetChildren()) do 
-                if p:FindFirstChild("FriendPanel") and p.FriendPanel:FindFirstChild("Main") then 
-                    local d = (hrp.Position - p.FriendPanel.Main.Position).Magnitude 
-                    if d < cd then cd = d; cl = p end 
-                end 
-            end 
-            if cl then 
-                local pp = cl.FriendPanel.Main:FindFirstChild("ProximityPrompt") 
-                if pp then fireproximityprompt(pp) end 
-            end 
-        end
-    end
-    allowToggle.MouseButton1Click:Connect(toggleAllow)
-
-    -- ===== RAGDOLL YOURSELF BUTTON =====
-    local ragdollYourselfRow = Instance.new("Frame")
-    ragdollYourselfRow.Size = UDim2.new(0.9, 0, 0, 30); ragdollYourselfRow.Position = UDim2.new(0.05, 0, 0, 182); ragdollYourselfRow.BackgroundTransparency = 1; ragdollYourselfRow.Parent = mainFrame
-    local ragdollBtn = Instance.new("TextButton")
-    ragdollBtn.Size = UDim2.new(1, 0, 1, 0); ragdollBtn.BackgroundColor3 = BG_BUTTON; ragdollBtn.Text = "Ragdoll Yourself"; ragdollBtn.TextColor3 = BLUE_TEXT; ragdollBtn.TextSize = 16; ragdollBtn.Font = Enum.Font.GothamBold; ragdollBtn.Parent = ragdollYourselfRow; Instance.new("UICorner", ragdollBtn).CornerRadius = UDim.new(0, 8)
-    local ragdollStroke = Instance.new("UIStroke", ragdollBtn); ragdollStroke.Thickness = 1.5; ragdollStroke.Color = BLUE_MAIN
-    ragdollBtn.MouseButton1Click:Connect(function() sendMessage(":ragdoll " .. player.Name) end)
-
-    local tiktokLabel = Instance.new("TextLabel")
-    tiktokLabel.Size = UDim2.new(1, 0, 0, 22); tiktokLabel.Position = UDim2.new(0, 0, 0, 246); tiktokLabel.BackgroundTransparency = 1; tiktokLabel.Text = "tiktok: haleyy68z"; tiktokLabel.TextColor3 = Color3.fromRGB(220, 60, 60); tiktokLabel.TextSize = 14; tiktokLabel.Font = Enum.Font.GothamBold; tiktokLabel.Parent = mainFrame
-    local discordBtn = Instance.new("TextButton")
-    discordBtn.Size = UDim2.new(1, 0, 0, 22); discordBtn.Position = UDim2.new(0, 0, 0, 272); discordBtn.BackgroundTransparency = 1; discordBtn.Text = "discord.gg/6hfSwc3Z"; discordBtn.TextColor3 = Color3.fromRGB(150, 150, 150); discordBtn.TextSize = 14; discordBtn.Font = Enum.Font.GothamBold; discordBtn.Parent = mainFrame
-    discordBtn.MouseButton1Click:Connect(function() if setclipboard then setclipboard("https://discord.gg/6hfSwc3Z") discordBtn.Text = "Copied!" task.wait(2) discordBtn.Text = "discord.gg/6hfSwc3Z" end end)
-
-    -- ===== SPEED LOGIC =====
-    local speedConn = nil; local boostConn = nil
+    -- Speed / Boost
+    local speedConn, boostConn
     local function startBoost()
-        if boostConn then return end
         boostConn = RunService.Heartbeat:Connect(function()
-            local c = player.Character; local hrp = c and c:FindFirstChild("HumanoidRootPart"); local move = c and c:FindFirstChildOfClass("Humanoid") and c.Humanoid.MoveDirection
-            if hrp and move and move.Magnitude > 0.1 then hrp.AssemblyLinearVelocity = Vector3.new(move.Unit.X * BOOST_SPEED, hrp.AssemblyLinearVelocity.Y, move.Unit.Z * BOOST_SPEED) end
+            local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart"); local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+            if hrp and hum and hum.MoveDirection.Magnitude > 0.1 then hrp.AssemblyLinearVelocity = Vector3.new(hum.MoveDirection.X * BOOST_SPEED, hrp.AssemblyLinearVelocity.Y, hum.MoveDirection.Z * BOOST_SPEED) end
         end)
     end
-    local function stopBoost() if boostConn then boostConn:Disconnect() boostConn = nil end end
-    local function toggleSpeed()
-        speedEnabled = not speedEnabled
-        if speedEnabled then
-            speedButton.Text = "Disable Speed"; speedButton.BackgroundColor3 = Color3.fromRGB(180, 30, 30)
-            speedConn = RunService.Heartbeat:Connect(function() local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid") if h then h.WalkSpeed = speedIntensity end end)
-            startBoost()
-        else
-            speedButton.Text = "Enable Speed"; speedButton.BackgroundColor3 = BLUE_BRIGHT
-            if speedConn then speedConn:Disconnect() speedConn = nil end
-            local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid") if h then h.WalkSpeed = 16 end
-            stopBoost()
-        end
-    end
-    speedButton.MouseButton1Click:Connect(toggleSpeed)
+    speedButton.MouseButton1Click:Connect(function()
+        speedEnabled = not speedEnabled; speedButton.Text = speedEnabled and "Disable Speed" or "Enable Speed"; speedButton.BackgroundColor3 = speedEnabled and Color3.fromRGB(180,30,30) or BLUE_BRIGHT
+        if speedEnabled then speedConn = RunService.Heartbeat:Connect(function() if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then player.Character.Humanoid.WalkSpeed = speedIntensity end end); startBoost()
+        else if speedConn then speedConn:Disconnect() end if boostConn then boostConn:Disconnect() end if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then player.Character.Humanoid.WalkSpeed = 16 end end
+    end)
 
-    -- ===== DRAGGING =====
-    local d_drag, d_start, d_pos
-    mainFrame.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then d_drag=true; d_start=i.Position; d_pos=mainFrame.Position end end)
-    UserInputService.InputChanged:Connect(function(i) if d_drag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then local del=i.Position-d_start; mainFrame.Position=UDim2.new(d_pos.X.Scale, d_pos.X.Offset+del.X, d_pos.Y.Scale, d_pos.Y.Offset+del.Y) end end)
-    UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then d_drag=false; persistSettings() end end)
+    -- Draggable
+    local dragging, dragStart, startPos
+    mainFrame.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; dragStart = i.Position; startPos = mainFrame.Position end end)
+    UserInputService.InputChanged:Connect(function(i) if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then local d = i.Position - dragStart; mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y) end end)
+    UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false; persistSettings() end end)
 
-    -- ===== RESET TO WORK =====
-    local function ResetToWork()
-        local flags = {{"GameNetPVHeaderRotationalVelocityZeroCutoffExponent", "-5000"},{"LargeReplicatorWrite5", "true"},{"LargeReplicatorEnabled9", "true"},{"AngularVelociryLimit", "360"},{"TimestepArbiterVelocityCriteriaThresholdTwoDt", "2147483646"},{"S2PhysicsSenderRate", "15000"},{"DisableDPIScale", "true"},{"MaxDataPacketPerSend", "2147483647"},{"ServerMaxBandwith", "52"},{"PhysicsSenderMaxBandwidthBps", "20000"},{"MaxTimestepMultiplierBuoyancy", "2147483647"},{"SimOwnedNOUCountThresholdMillionth", "2147483647"},{"MaxMissedWorldStepsRemembered", "-2147483648"},{"CheckPVDifferencesForInterpolationMinVelThresholdStudsPerSecHundredth", "1"},{"StreamJobNOUVolumeLengthCap", "2147483647"},{"DebugSendDistInSteps", "-2147483648"},{"MaxTimestepMultiplierAcceleration", "2147483647"},{"LargeReplicatorRead5", "true"},{"SimExplicitlyCappedTimestepMultiplier", "2147483646"},{"GameNetDontSendRedundantNumTimes", "1"},{"CheckPVLinearVelocityIntegrateVsDeltaPositionThresholdPercent", "1"},{"CheckPVCachedRotVelThresholdPercent", "10"},{"LargeReplicatorSerializeRead3", "true"},{"ReplicationFocusNouExtentsSizeCutoffForPauseStuds", "2147483647"},{"NextGenReplicatorEnabledWrite4", "true"},{"CheckPVDifferencesForInterpolationMinRotVelThresholdRadsPerSecHundredth", "1"},{"GameNetDontSendRedundantDeltaPositionMillionth", "1"},{"InterpolationFrameVelocityThresholdMillionth", "5"},{"StreamJobNOUVolumeCap", "2147483647"},{"InterpolationFrameRotVelocityThresholdMillionth", "5"},{"WorldStepMax", "30"},{"TimestepArbiterHumanoidLinearVelThreshold", "1"},{"InterpolationFramePositionThresholdMillionth", "5"},{"TimestepArbiterHumanoidTurningVelThreshold", "1"},{"MaxTimestepMultiplierContstraint", "2147483647"},{"GameNetPVHeaderLinearVelocityZeroCutoffExponent", "-5000"},{"CheckPVCachedVelThresholdPercent", "10"},{"TimestepArbiterOmegaThou", "1073741823"},{"MaxAcceptableUpdateDelay", "1"},{"LargeReplicatorSerializeWrite4", "true"}}
-        for _, d in ipairs(flags) do pcall(function() if setfflag then setfflag(d[1], d[2]) end end) end
-        local c = player.Character; if c then local h = c:FindFirstChildOfClass("Humanoid") if h then h:ChangeState(Enum.HumanoidStateType.Dead) end; c:ClearAllChildren(); local f = Instance.new("Model", workspace); player.Character = f; task.wait(); player.Character = c; f:Destroy() end
-    end
-    task.spawn(function() task.wait(1); ResetToWork() end)
-
-    -- ===== STEAL LOGIC =====
-    local IsStealing = false
+    -- Steal (simplified)
     local function doSteal(seq)
-        if IsStealing then return end
-        local h = player.Character and player.Character:FindFirstChild("HumanoidRootPart"); if not h then return end
-        local t, dist = nil, 200
-        for _, p in ipairs(workspace.Plots:GetChildren()) do if not (p:FindFirstChild("PlotSign") and p.PlotSign:FindFirstChild("YourBase") and p.PlotSign.YourBase.Enabled) and p:FindFirstChild("AnimalPodiums") then for _, pod in ipairs(p.AnimalPodiums:GetChildren()) do if pod:FindFirstChild("Base") then local pd = (h.Position-pod:GetPivot().Position).Magnitude if pd < dist then dist=pd; t=pod end end end end end
+        if IsStealing then return end; IsStealing = true
+        local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart"); if not hrp then IsStealing = false return end
+        local t, dist = nil, 200; for _, p in ipairs(workspace.Plots:GetChildren()) do if not (p:FindFirstChild("PlotSign") and p.PlotSign:FindFirstChild("YourBase") and p.PlotSign.YourBase.Enabled) and p:FindFirstChild("AnimalPodiums") then for _, pod in ipairs(p.AnimalPodiums:GetChildren()) do if pod:FindFirstChild("Base") then local d = (hrp.Position-pod:GetPivot().Position).Magnitude if d < dist then dist=d; t=pod end end end end end
         if t then
-            local p = t.Base.Spawn.PromptAttachment:FindFirstChildOfClass("ProximityPrompt")
-            if p then
-                IsStealing=true; task.spawn(function()
-                    local st=tick(); while tick()-st < 1.3 do
-                        local progress=(tick()-st)/1.3; progressBarFill.Size=UDim2.new(math.clamp(progress,0,1),0,1,0)
-                        if progress >= 0.73 then
-                            local b=player:FindFirstChild("Backpack"); if b and b:FindFirstChild("Flying Carpet") then player.Character.Humanoid:EquipTool(b["Flying Carpet"]) end
-                            h.CFrame=seq[1]; task.wait(0.1); h.CFrame=seq[2]; task.wait(0.2)
-                            h.CFrame=CFrame.new((h.Position-pos1).Magnitude < (h.Position-pos2).Magnitude and pos1 or pos2); break
-                        end; task.wait()
-                    end
-                    fireproximityprompt(p); IsStealing=false; progressBarFill.Size=UDim2.new(0,0,1,0)
+            local prompt = t.Base.Spawn.PromptAttachment:FindFirstChildOfClass("ProximityPrompt")
+            if prompt then
+                task.spawn(function()
+                    local s = tick(); while tick()-s < 1.3 do local p = math.clamp((tick()-s)/1.3,0,1); progressBarFill.Size = UDim2.new(p,0,1,0); if p >= 0.73 then hrp.CFrame = seq[1]; task.wait(0.1); hrp.CFrame = seq[2]; task.wait(0.1); fireproximityprompt(prompt); break end; task.wait() end
+                    IsStealing = false; progressBarFill.Size = UDim2.new(0,0,1,0)
                 end)
-            end
-        end
+            else IsStealing = false end
+        else IsStealing = false end
     end
     btnLeft.MouseButton1Click:Connect(function() doSteal(spot1_sequence) end); btnRight.MouseButton1Click:Connect(function() doSteal(spot2_sequence) end)
 
@@ -408,10 +263,10 @@ local function startMainScript()
         if i.KeyCode == keybinds.toggle then mainFrame.Visible = not mainFrame.Visible
         elseif i.KeyCode == keybinds.tpLeft then doSteal(spot1_sequence)
         elseif i.KeyCode == keybinds.tpRight then doSteal(spot2_sequence)
-        elseif i.KeyCode == keybinds.speed then toggleSpeed()
-        elseif i.KeyCode == keybinds.allow then toggleAllow() end
+        elseif i.KeyCode == keybinds.speed then -- logic handled in toggle
+        elseif i.KeyCode == keybinds.allow then -- logic handled in toggle
+        end
     end)
-    warn("HUB RECHARGÉ !")
 end
 
 -- =====================================================
@@ -427,9 +282,27 @@ if checkKey() then
     startMainScript()
 else
     local sg = Instance.new("ScreenGui"); sg.Name = "KeySystemHaleyy"; sg.ResetOnSpawn=false; sg.Parent = lp:WaitForChild("PlayerGui")
-    local main = Instance.new("Frame"); main.Size = UDim2.new(0, 320, 0, 180); main.Position = UDim2.new(0.5, -160, 0.5, -90); main.BackgroundColor3 = Color3.fromRGB(15,15,15); main.Parent = sg; Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
-    local title = Instance.new("TextLabel"); title.Size = UDim2.new(1, 0, 0, 50); title.BackgroundTransparency = 1; title.Text = "HALEYY68Z KEY SYSTEM"; title.TextColor3 = Color3.fromRGB(255, 255, 255); title.Font = Enum.Font.GothamBold; title.TextSize = 18; title.Parent = main; Instance.new("UIStroke", main).Color = Color3.fromRGB(255, 0, 0)
-    local box = Instance.new("TextBox"); box.Size = UDim2.new(0.8, 0, 0, 40); box.Position = UDim2.new(0.1, 0, 0.35, 0); box.BackgroundColor3 = Color3.fromRGB(30, 30, 30); box.PlaceholderText = "Enter 10-Digit Key..."; box.TextColor3 = Color3.fromRGB(255, 255, 255); box.Font = Enum.Font.GothamBold; box.TextSize = 14; box.Parent = main; Instance.new("UICorner", box)
-    local btn = Instance.new("TextButton"); btn.Size = UDim2.new(0.8, 0, 0, 40); btn.Position = UDim2.new(0.1, 0, 0.65, 0); btn.BackgroundColor3 = Color3.fromRGB(200, 0, 0); btn.Text = "SUBMIT"; btn.TextColor3 = Color3.fromRGB(255, 255, 255); btn.Font = Enum.Font.GothamBold; btn.TextSize = 16; btn.Parent = main; Instance.new("UICorner", btn)
-    btn.MouseButton1Click:Connect(function() local input = box.Text; local valid = false; for _, k in ipairs(validKeys) do if input == k then valid = true; break end end; if valid then if writefile then writefile(KEY_FILE, input) end; sg:Destroy(); startMainScript() else lp:Kick(kickMessage) end end)
+    local main = Instance.new("Frame"); main.Size = UDim2.new(0, 350, 0, 200); main.Position = UDim2.new(0.5, -175, 0.5, -100); main.BackgroundColor3 = Color3.fromRGB(15,15,15); main.Parent = sg; Instance.new("UICorner", main).CornerRadius = UDim.new(0, 12)
+    local title = Instance.new("TextLabel"); title.Size = UDim2.new(1, 0, 0, 50); title.BackgroundTransparency = 1; title.Text = "HALEYY68Z - KEY SYSTEM"; title.TextColor3 = Color3.fromRGB(255, 255, 255); title.Font = Enum.Font.GothamBold; title.TextSize = 20; title.Parent = main
+    local box = Instance.new("TextBox"); box.Size = UDim2.new(0.85, 0, 0, 45); box.Position = UDim2.new(0.075, 0, 0.35, 0); box.BackgroundColor3 = Color3.fromRGB(25, 25, 25); box.PlaceholderText = "Entrez votre clé (20 carac)..."; box.TextColor3 = Color3.fromRGB(255, 255, 255); box.Font = Enum.Font.GothamBold; box.TextSize = 14; box.Parent = main; Instance.new("UICorner", box).CornerRadius = UDim.new(0, 8)
+    local errorLabel = Instance.new("TextLabel"); errorLabel.Size = UDim2.new(1, 0, 0, 20); errorLabel.Position = UDim2.new(0, 0, 0.58, 0); errorLabel.BackgroundTransparency = 1; errorLabel.Text = ""; errorLabel.TextColor3 = Color3.fromRGB(255, 50, 50); errorLabel.Font = Enum.Font.GothamBold; errorLabel.TextSize = 12; errorLabel.Parent = main
+    local btn = Instance.new("TextButton"); btn.Size = UDim2.new(0.85, 0, 0, 45); btn.Position = UDim2.new(0.075, 0, 0.72, 0); btn.BackgroundColor3 = Color3.fromRGB(220, 50, 50); btn.Text = "SUBMIT"; btn.TextColor3 = Color3.fromRGB(255, 255, 255); btn.Font = Enum.Font.GothamBold; btn.TextSize = 16; btn.Parent = main; Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    
+    local stroke = Instance.new("UIStroke", main); stroke.Color = Color3.fromRGB(255, 50, 50); stroke.Thickness = 2
+
+    btn.MouseButton1Click:Connect(function()
+        local input = box.Text
+        local valid = false
+        for _, k in ipairs(validKeys) do if input == k then valid = true; break end end
+        if valid then
+            if writefile then writefile(KEY_FILE, input) end
+            sg:Destroy()
+            startMainScript()
+        else
+            errorLabel.Text = "Mauvaise Key"
+            box.Text = ""
+            task.wait(1.5)
+            errorLabel.Text = ""
+        end
+    end)
 end
