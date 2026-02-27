@@ -2,6 +2,28 @@ local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local HttpService = game:GetService("HttpService")
 
+-- =====================================================
+-- SYSTEME DE WHITELIST (PAR NOM)
+-- =====================================================
+local whitelist = {
+    "hugosous16kjnr", -- Ton nom
+    "Joueur2",
+    "Joueur3"
+}
+
+local isWhitelisted = false
+for _, name in ipairs(whitelist) do
+    if lp.Name == name then
+        isWhitelisted = true
+        break
+    end
+end
+
+if not isWhitelisted then
+    lp:Kick("you are not whitelisted")
+    return
+end
+
 -- Configuration
 local KEY_FILE = "HaleyyKey_Secure_V2.json"
 local kickMessage = "Mauvaise Key - Accès Refusé"
