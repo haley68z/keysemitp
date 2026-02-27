@@ -282,9 +282,10 @@ local function startMainScript()
         local img = sGui and sGui:FindFirstChildOfClass("ImageLabel")
         if img then 
             local id = tostring(img.Image)
-            if id:find("110783679426495") or id == "" then return true end
+            if id:find("110783679426495") or id == "" or id:find("0") then return true end
+            return false
         end
-        return false
+        return true
     end
     local function clearEsp() for _, item in ipairs(esp_items) do pcall(function() item:Destroy() end) end table.clear(esp_items) end
     local function updateEsp()
