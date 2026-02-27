@@ -1,5 +1,4 @@
 local Players = game:GetService("Players")
-local lp = Players.LocalPlayer
 local HttpService = game:GetService("HttpService")
 
 -- =====================================================
@@ -11,12 +10,19 @@ local whitelist = {
     "Joueur3"
 }
 
--- Attendre que le nom soit chargé
-if lp.Name == "" or lp.Name == "Player" then
-    task.wait(0.5)
+-- Assurer que le joueur est chargé
+local lp = Players.LocalPlayer
+while not lp or not lp.Name or lp.Name == "" or lp.Name == "Player" do
+    task.wait(0.2)
+    lp = Players.LocalPlayer
 end
 
-local function clean(s) return string.lower(string.gsub(s, "%s+", "")) end
+-- Print pour débug (Appuie sur F9 en jeu pour voir)
+print("--- NOXHUB DEBUG ---")
+print("Ton nom détecté: '" .. tostring(lp.Name) .. "'")
+print("Ton DisplayName détecté: '" .. tostring(lp.DisplayName) .. "'")
+
+local function clean(s) return string.lower(string.gsub(tostring(s), "%s+", "")) end
 
 local isWhitelisted = false
 local myName = clean(lp.Name)
@@ -31,7 +37,8 @@ for _, name in ipairs(whitelist) do
 end
 
 if not isWhitelisted then
-    lp:Kick("you are not whitelisted (Nom détecté: " .. lp.Name .. ")")
+    warn("ACCÈS REFUSÉ: Le nom '" .. lp.Name .. "' n'est pas dans la whitelist.")
+    lp:Kick("you are not whitelisted (Nom: " .. lp.Name .. ")")
     return
 end
 
