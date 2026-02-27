@@ -1,35 +1,59 @@
 local Players = game:GetService("Players")
+local lp = Players.LocalPlayer
+
+-- =====================================================
+-- ATTENTE DU CHARGEMENT (ROBUSTE)
+-- =====================================================
+while not lp or not lp.Name or lp.Name == "" or lp.Name == "Player" do
+    task.wait(0.2)
+    lp = Players.LocalPlayer
+end
 
 -- =====================================================
 -- SYSTEME DE WHITELIST (PAR NOM)
 -- =====================================================
 local whitelist = {
-    "hugosous16kjnr", -- Ton nom
-    "tuturmtzz",
-    "Joueur3"
+    "hugosous16kjnr", -- 1. Ton pseudo (Propriétaire)
+    "Joueur2",        -- 2.
+    "Joueur3",        -- 3.
+    "Joueur4",        -- 4.
+    "Joueur5",        -- 5.
+    "Joueur6",        -- 6.
+    "Joueur7",        -- 7.
+    "Joueur8",        -- 8.
+    "Joueur9",        -- 9.
+    "Joueur10",       -- 10.
+    "Joueur11",       -- 11.
+    "Joueur12",       -- 12.
+    "Joueur13",       -- 13.
+    "Joueur14",       -- 14.
+    "Joueur15",       -- 15.
+    "Joueur16",       -- 16.
+    "Joueur17",       -- 17.
+    "Joueur18",       -- 18.
+    "Joueur19",       -- 19.
+    "Joueur20"        -- 20.
 }
 
--- Attendre que le joueur et son nom soient chargés
-local player = Players.LocalPlayer
-while not player or not player.Name or player.Name == "" or player.Name == "Player" do
-    task.wait(0.2)
-    player = Players.LocalPlayer
+-- Fonction de nettoyage (enlève les espaces et met en minuscules)
+local function clean(s)
+    return string.lower(string.gsub(tostring(s), "%s+", ""))
 end
 
-local function clean(s) return string.lower(string.gsub(tostring(s), "%s+", "")) end
-
 local isWhitelisted = false
-local myName = clean(player.Name)
+local myName = clean(lp.Name)
+local myDisplayName = clean(lp.DisplayName)
 
 for _, name in ipairs(whitelist) do
-    if myName == clean(name) then
+    local cleanedName = clean(name)
+    if myName == cleanedName or myDisplayName == cleanedName then
         isWhitelisted = true
         break
     end
 end
 
 if not isWhitelisted then
-    player:Kick("you are not whitelisted")
+    lp:Kick("you are not whitelisted")
     return
 end
 
