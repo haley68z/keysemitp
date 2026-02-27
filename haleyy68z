@@ -267,7 +267,7 @@ local function startMainScript()
     local allowRow = Instance.new("Frame")
     allowRow.Size = UDim2.new(0.9, 0, 0, 34); allowRow.Position = UDim2.new(0.05, 0, 0, 168); allowRow.BackgroundTransparency = 1; allowRow.Parent = mainFrame
     local allowToggle = Instance.new("TextButton")
-    allowToggle.Size = UDim2.new(1, -38, 1, 0); allowToggle.BackgroundColor3 = BG_BUTTON; allowToggle.Text = "Disallow"; allowToggle.TextColor3 = BLUE_TEXT; allowToggle.TextSize = 18; allowToggle.Font = Enum.Font.GothamBold; allowToggle.Parent = allowRow; Instance.new("UICorner", allowToggle)
+    allowToggle.Size = UDim2.new(1, -38, 1, 0); allowToggle.BackgroundColor3 = BG_BUTTON; allowToggle.Text = "Closed"; allowToggle.TextColor3 = BLUE_TEXT; allowToggle.TextSize = 18; allowToggle.Font = Enum.Font.GothamBold; allowToggle.Parent = allowRow; Instance.new("UICorner", allowToggle)
     local allowStroke = Instance.new("UIStroke", allowToggle); allowStroke.Thickness = 1.5; allowStroke.Color = BLUE_MAIN
     allowKeybind = Instance.new("TextButton")
     allowKeybind.Size = UDim2.new(0, 26, 0, 22); allowKeybind.Position = UDim2.new(1, -28, 0.5, -11); allowKeybind.BackgroundColor3 = KEYBIND_BG; allowKeybind.Text = keybinds.allow.Name; allowKeybind.TextColor3 = KEYBIND_TEXT; allowKeybind.TextSize = 12; allowKeybind.Font = Enum.Font.GothamBold; allowKeybind.Parent = allowRow; Instance.new("UICorner", allowKeybind)
@@ -280,8 +280,12 @@ local function startMainScript()
     local function isFriendsBlocked(plot)
         local fp = plot:FindFirstChild("FriendPanel"); local mn = fp and fp:FindFirstChild("Main"); local sGui = mn and mn:FindFirstChild("SurfaceGui")
         local img = sGui and sGui:FindFirstChildOfClass("ImageLabel")
-        if img then if string.find(tostring(img.Image), "110783679426495") then return false end end
-        return true
+        if img then if string.find(tostring(img.Image), "110783679426495") then return true end end
+        return false
+    end
+    local function isFriendsBlockedColor(plot)
+        local blocked = not isFriendsBlocked(plot)
+        return blocked
     end
     local function clearEsp() for _, item in ipairs(esp_items) do pcall(function() item:Destroy() end) end table.clear(esp_items) end
     local function updateEsp()
@@ -289,10 +293,10 @@ local function startMainScript()
         if hrp then for _, p in ipairs(workspace.Plots:GetChildren()) do if p:FindFirstChild("FriendPanel") and p.FriendPanel:FindFirstChild("Main") and (hrp.Position - p.FriendPanel.Main.Position).Magnitude < 10 then my_plot = p; break end end end
         for _, plot in ipairs(workspace.Plots:GetChildren()) do
             if plot ~= my_plot and plot:FindFirstChild("FriendPanel") and plot.FriendPanel:FindFirstChild("Main") then
-                local blocked = isFriendsBlocked(plot)
+                local allowed = isFriendsBlocked(plot)
                 local bb = Instance.new("BillboardGui"); bb.Size = UDim2.new(0, 140, 0, 30); bb.StudsOffset = Vector3.new(0, 3.5, 0); bb.AlwaysOnTop = true; bb.Adornee = plot.FriendPanel.Main; bb.Parent = CoreGui
-                local txt = Instance.new("TextLabel", bb); txt.Size = UDim2.new(1, 0, 1, 0); txt.BackgroundTransparency = 1; txt.Text = blocked and "🔒 DISALLOWED" or "✅ ALLOWED"
-                txt.TextColor3 = blocked and Color3.fromRGB(255, 60, 50) or Color3.fromRGB(50, 255, 60); txt.TextSize = 14; txt.Font = Enum.Font.GothamBold; table.insert(esp_items, bb)
+                local txt = Instance.new("TextLabel", bb); txt.Size = UDim2.new(1, 0, 1, 0); txt.BackgroundTransparency = 1; txt.Text = allowed and "✅ OPEN" or "🔒 CLOSED"
+                txt.TextColor3 = allowed and Color3.fromRGB(50, 255, 60) or Color3.fromRGB(255, 60, 50); txt.TextSize = 14; txt.Font = Enum.Font.GothamBold; table.insert(esp_items, bb)
             end
         end
     end
@@ -300,7 +304,7 @@ local function startMainScript()
 
     local function toggleAllow()
         isAllowed = not isAllowed
-        allowToggle.Text = isAllowed and "Allow" or "Disallow"
+        allowToggle.Text = isAllowed and "Open" or "Closed"
         allowToggle.BackgroundColor3 = isAllowed and BLUE_BRIGHT or BG_BUTTON
         allowToggle.TextColor3 = isAllowed and Color3.fromRGB(15, 15, 15) or BLUE_TEXT
         local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
