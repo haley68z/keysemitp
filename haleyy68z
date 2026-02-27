@@ -13,7 +13,7 @@ local whitelist = {
 
 local isWhitelisted = false
 for _, name in ipairs(whitelist) do
-    if lp.Name == name then
+    if string.lower(lp.Name) == string.lower(string.gsub(name, "^%s*(.-)%s*$", "%1")) then
         isWhitelisted = true
         break
     end
