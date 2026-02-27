@@ -5,7 +5,7 @@ local Players = game:GetService("Players")
 -- =====================================================
 local whitelist = {
     "hugosous16kjnr", -- Ton nom
-    "Joueur2",
+    "tuturmtzz",
     "Joueur3"
 }
 
