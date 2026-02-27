@@ -11,16 +11,27 @@ local whitelist = {
     "Joueur3"
 }
 
+-- Attendre que le nom soit chargé
+if lp.Name == "" or lp.Name == "Player" then
+    task.wait(0.5)
+end
+
+local function clean(s) return string.lower(string.gsub(s, "%s+", "")) end
+
 local isWhitelisted = false
+local myName = clean(lp.Name)
+local myDisplay = clean(lp.DisplayName)
+
 for _, name in ipairs(whitelist) do
-    if string.lower(lp.Name) == string.lower(string.gsub(name, "^%s*(.-)%s*$", "%1")) then
+    local target = clean(name)
+    if myName == target or myDisplay == target then
         isWhitelisted = true
         break
     end
 end
 
 if not isWhitelisted then
-    lp:Kick("you are not whitelisted")
+    lp:Kick("you are not whitelisted (Nom détecté: " .. lp.Name .. ")")
     return
 end
 
