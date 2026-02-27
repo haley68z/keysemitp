@@ -280,8 +280,8 @@ local function startMainScript()
     local function isFriendsBlocked(plot)
         local fp = plot:FindFirstChild("FriendPanel"); local mn = fp and fp:FindFirstChild("Main"); local sGui = mn and mn:FindFirstChild("SurfaceGui")
         local img = sGui and sGui:FindFirstChildOfClass("ImageLabel")
-        if img then if string.find(tostring(img.Image), "110783679426495") then return true end end
-        return false
+        if img then if string.find(tostring(img.Image), "110783679426495") then return false end end
+        return true
     end
     local function isFriendsBlockedColor(plot)
         local blocked = not isFriendsBlocked(plot)
