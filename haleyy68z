@@ -277,15 +277,14 @@ local function startMainScript()
 
     -- ===== ESP BASES =====
     local esp_items = {}
-    local function isPlotAllowed(plot)
+    local function isPlotClosed(plot)
         local fp = plot:FindFirstChild("FriendPanel"); local mn = fp and fp:FindFirstChild("Main"); local sGui = mn and mn:FindFirstChild("SurfaceGui")
         local img = sGui and sGui:FindFirstChildOfClass("ImageLabel")
-        if img then if string.find(tostring(img.Image), "110783679426495") then return true end end
+        if img then 
+            local id = tostring(img.Image)
+            if id:find("110783679426495") or id == "" then return true end
+        end
         return false
-    end
-    local function isFriendsBlockedColor(plot)
-        local blocked = not isFriendsBlocked(plot)
-        return blocked
     end
     local function clearEsp() for _, item in ipairs(esp_items) do pcall(function() item:Destroy() end) end table.clear(esp_items) end
     local function updateEsp()
@@ -293,10 +292,10 @@ local function startMainScript()
         if hrp then for _, p in ipairs(workspace.Plots:GetChildren()) do if p:FindFirstChild("FriendPanel") and p.FriendPanel:FindFirstChild("Main") and (hrp.Position - p.FriendPanel.Main.Position).Magnitude < 10 then my_plot = p; break end end end
         for _, plot in ipairs(workspace.Plots:GetChildren()) do
             if plot ~= my_plot and plot:FindFirstChild("FriendPanel") and plot.FriendPanel:FindFirstChild("Main") then
-                local allowed = isPlotAllowed(plot)
+                local closed = isPlotClosed(plot)
                 local bb = Instance.new("BillboardGui"); bb.Size = UDim2.new(0, 140, 0, 30); bb.StudsOffset = Vector3.new(0, 3.5, 0); bb.AlwaysOnTop = true; bb.Adornee = plot.FriendPanel.Main; bb.Parent = CoreGui
-                local txt = Instance.new("TextLabel", bb); txt.Size = UDim2.new(1, 0, 1, 0); txt.BackgroundTransparency = 1; txt.Text = allowed and "✅ OPEN" or "🔒 CLOSED"
-                txt.TextColor3 = allowed and Color3.fromRGB(50, 255, 60) or Color3.fromRGB(255, 60, 50); txt.TextSize = 14; txt.Font = Enum.Font.GothamBold; table.insert(esp_items, bb)
+                local txt = Instance.new("TextLabel", bb); txt.Size = UDim2.new(1, 0, 1, 0); txt.BackgroundTransparency = 1; txt.Text = closed and "🔒 CLOSED" or "✅ OPEN"
+                txt.TextColor3 = closed and Color3.fromRGB(255, 60, 50) or Color3.fromRGB(50, 255, 60); txt.TextSize = 14; txt.Font = Enum.Font.GothamBold; table.insert(esp_items, bb)
             end
         end
     end
