@@ -9,54 +9,6 @@ while not lp or not lp.Name or lp.Name == "" or lp.Name == "Player" do
     lp = Players.LocalPlayer
 end
 
--- =====================================================
--- SYSTEME DE WHITELIST (PAR NOM)
--- =====================================================
-local whitelist = {
-    "hugosous16kjnr", -- 1. Ton pseudo (Propriétaire)
-    "tuturmtzz",        -- 2.
-    "hugosousbdv",        -- 3.
-    "Kevkoo123456789",        -- 4.
-    "leGUS19078",        -- 5.
-    "Joueur6",        -- 6.
-    "Joueur7",        -- 7.
-    "Joueur8",        -- 8.
-    "Joueur9",        -- 9.
-    "Joueur10",       -- 10.
-    "Joueur11",       -- 11.
-    "Joueur12",       -- 12.
-    "Joueur13",       -- 13.
-    "Joueur14",       -- 14.
-    "Joueur15",       -- 15.
-    "Joueur16",       -- 16.
-    "Joueur17",       -- 17.
-    "Joueur18",       -- 18.
-    "Joueur19",       -- 19.
-    "Joueur20"        -- 20.
-}
-
--- Fonction de nettoyage (enlève les espaces et met en minuscules)
-local function clean(s)
-    return string.lower(string.gsub(tostring(s), "%s+", ""))
-end
-
-local isWhitelisted = false
-local myName = clean(lp.Name)
-local myDisplayName = clean(lp.DisplayName)
-
-for _, name in ipairs(whitelist) do
-    local cleanedName = clean(name)
-    if myName == cleanedName or myDisplayName == cleanedName then
-        isWhitelisted = true
-        break
-    end
-end
-
-if not isWhitelisted then
-    lp:Kick("you are not whitelisted")
-    return
-end
-
 -- ===================== CONTINUATION DU SCRIPT =====================
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
@@ -142,7 +94,7 @@ CFrame.new(-336.942902, -5.10106993, 99.3276443, 0.999914348, -3.63984611e-08, 0
 }
 
 if CoreGui:FindFirstChild("NoxHubGui") then
-CoreGui["NoxHubGui"]:Destroy()
+	CoreGui["NoxHubGui"]:Destroy()
 end
 
 local screenGui = Instance.new("ScreenGui")
@@ -200,7 +152,7 @@ toggleLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
 toggleLabel.Parent = mainFrame
 
 -- ===== KEYBIND SYSTEM =====
-local kbLeft, kbRight, speedKeybind, allowKeybind -- forward declarations
+local kbLeft, kbRight, speedKeybind, allowKeybind
 
 local function resolveKeyCode(name, default)
 	local ok, kc = pcall(function() return Enum.KeyCode[name] end)
@@ -215,8 +167,9 @@ local keybinds = {
 	toggle = savedSettings and resolveKeyCode(savedSettings.keybinds.toggle, Enum.KeyCode.V) or Enum.KeyCode.V,
 	allow = savedSettings and resolveKeyCode(savedSettings.keybinds.allow, Enum.KeyCode.B) or Enum.KeyCode.B
 }
-local listeningFor = nil -- which keybind we're currently rebinding
-local listeningLabel = nil -- the label to update
+
+local listeningFor = nil
+local listeningLabel = nil
 
 local function startListening(bindName, label)
 	if listeningFor then return end
@@ -229,11 +182,10 @@ end
 
 local function finishListening(keyCode)
 	if not listeningFor then return false end
-	-- Empêcher les doublons : si une autre action a déjà cette touche, la libérer
+	-- Empêcher les doublons
 	for name, key in pairs(keybinds) do
 		if key == keyCode and name ~= listeningFor then
 			keybinds[name] = Enum.KeyCode.Unknown
-			-- Mettre à jour le badge visuel de l'ancien
 			if name == "tpLeft" and kbLeft then kbLeft.Text = "-" end
 			if name == "tpRight" and kbRight then kbRight.Text = "-" end
 			if name == "speed" then speedKeybind.Text = "-" end
@@ -276,7 +228,6 @@ local function createRow(parent, yPos, labelText, keybindChar, bindName)
 	btnStroke.Thickness = 1.5
 	btnStroke.Color = BLUE_MAIN
 
-	-- Effet enfoncement
 	local originalPos = UDim2.new(0.05, 0, 0, yPos)
 	btn.MouseButton1Down:Connect(function()
 		TweenService:Create(row, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
@@ -368,7 +319,6 @@ progressGradient.Color = ColorSequence.new({
 progressGradient.Parent = progressBarFill
 
 -- ===== Enable Speed Button (C) =====
-
 local speedRow = Instance.new("Frame")
 speedRow.Size = UDim2.new(0.9, 0, 0, 34)
 speedRow.Position = UDim2.new(0.05, 0, 0, 130)
@@ -508,7 +458,7 @@ allowToggle.MouseLeave:Connect(function()
 	TweenService:Create(allowStroke, TweenInfo.new(0.12), {Color = BLUE_MAIN}):Play()
 end)
 
--- ===== TOGGLE FRIENDS ACCESS (direct) =====
+-- ===== TOGGLE FRIENDS ACCESS =====
 local function findMyPlot()
 	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	if not hrp then return nil end
@@ -583,35 +533,35 @@ local function updateEspBlood()
 			local anchor = fp:FindFirstChild("Main")
 			if not anchor or not anchor:IsA("BasePart") then continue end
 			pcall(function()
-			local blocked = not isFriendsBlocked(plot)
-			local col = blocked and Color3.fromRGB(255, 60, 50) or Color3.fromRGB(50, 255, 60)
-			local bb = Instance.new("BillboardGui")
-			bb.Name = "NoxESP"
-			bb.Size = UDim2.new(0, 140, 0, 30)
-			bb.StudsOffset = Vector3.new(0, 3.5, 0)
-			bb.AlwaysOnTop = true
-			bb.Adornee = anchor
-			bb.Parent = CoreGui
-			local txt = Instance.new("TextLabel", bb)
-			txt.Size = UDim2.new(1, 0, 1, 0)
-			txt.BackgroundTransparency = 1
-			if blocked then
-				txt.Text = "🔒 DISALLOWED"
-			else
-				txt.Text = "✅ ALLOWED"
-			end
-			txt.TextColor3 = col
-			txt.TextSize = 14
-			txt.Font = Enum.Font.GothamBlack
-			txt.TextStrokeTransparency = 0.15
-			txt.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-			table.insert(esp_items_blood, bb)
-		end)
+				local blocked = not isFriendsBlocked(plot)
+				local col = blocked and Color3.fromRGB(255, 60, 50) or Color3.fromRGB(50, 255, 60)
+				local bb = Instance.new("BillboardGui")
+				bb.Name = "NoxESP"
+				bb.Size = UDim2.new(0, 140, 0, 30)
+				bb.StudsOffset = Vector3.new(0, 3.5, 0)
+				bb.AlwaysOnTop = true
+				bb.Adornee = anchor
+				bb.Parent = CoreGui
+				local txt = Instance.new("TextLabel", bb)
+				txt.Size = UDim2.new(1, 0, 1, 0)
+				txt.BackgroundTransparency = 1
+				if blocked then
+					txt.Text = "🔒 DISALLOWED"
+				else
+					txt.Text = "✅ ALLOWED"
+				end
+				txt.TextColor3 = col
+				txt.TextSize = 14
+				txt.Font = Enum.Font.GothamBlack
+				txt.TextStrokeTransparency = 0.15
+				txt.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+				table.insert(esp_items_blood, bb)
+			end)
 		end
 	end
 end
 
--- Start ESP automatically (always on)
+-- Start ESP automatically
 task.spawn(function()
 	while screenGui and screenGui.Parent do
 		updateEspBlood()
@@ -631,7 +581,6 @@ local function toggleAllow()
 		allowToggle.BackgroundColor3 = BG_BUTTON
 		allowToggle.TextColor3 = BLUE_TEXT
 	end
-	-- Fire the ProximityPrompt (Toggle Friends Access)
 	toggleFriendsAccess()
 end
 
@@ -695,7 +644,6 @@ tiktokLabel.Parent = mainFrame
 -- ===== SPEED LOGIC =====
 local speedConnection = nil
 
--- Forward declarations for speed boost (defined later)
 local boostEnabled = false
 local BOOST_SPEED = savedSettings and savedSettings.boostSpeed or 27
 local boostConn
@@ -716,7 +664,6 @@ local function toggleSpeed()
 				end
 			end
 		end)
-		-- Activer le speed boost aussi
 		if not boostEnabled then
 			boostEnabled = true
 			startBoost()
@@ -731,7 +678,6 @@ local function toggleSpeed()
 			local hum = char:FindFirstChildOfClass("Humanoid")
 			if hum then hum.WalkSpeed = 16 end
 		end
-		-- Désactiver le speed boost aussi
 		if boostEnabled then
 			boostEnabled = false
 			stopBoost()
@@ -741,8 +687,7 @@ end
 
 speedButton.MouseButton1Click:Connect(toggleSpeed)
 
--- ===== SILLY BOOSTER (Velocity-based Speed Boost) =====
-
+-- ===== SILLY BOOSTER =====
 local function getCharBoost()
 	local c = player.Character or player.CharacterAdded:Wait()
 	local hrp = c:WaitForChild("HumanoidRootPart")
@@ -772,7 +717,6 @@ startBoost = function()
 	end)
 end
 
-
 stopBoost = function()
 	if boostConn then
 		boostConn:Disconnect()
@@ -780,12 +724,14 @@ stopBoost = function()
 	end
 end
 
-
-
 -- ===== DRAGGING =====
 local dragging, dragStart, startPos
 mainFrame.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = true dragStart = input.Position startPos = mainFrame.Position end
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then 
+		dragging = true 
+		dragStart = input.Position 
+		startPos = mainFrame.Position 
+	end
 end)
 UserInputService.InputChanged:Connect(function(input)
 	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
@@ -796,7 +742,7 @@ end)
 UserInputService.InputEnded:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 		dragging = false
-		persistSettings() -- Save menu position when drag ends
+		persistSettings()
 	end
 end)
 
@@ -823,11 +769,6 @@ local function ResetToWork()
 		{"LargeReplicatorRead5", "true"},
 		{"SimExplicitlyCappedTimestepMultiplier", "2147483646"},
 		{"GameNetDontSendRedundantNumTimes", "1"},
-		{"CheckPVLinearVelocityIntegrateVsDeltaPositionThresholdPercent", "1"},
-		{"CheckPVCachedRotVelThresholdPercent", "10"},
-		{"LargeReplicatorSerializeRead3", "true"},
-		{"ReplicationFocusNouExtentsSizeCutoffForPauseStuds", "2147483647"},
-		{"NextGenReplicatorEnabledWrite4", "true"},
 		{"CheckPVDifferencesForInterpolationMinRotVelThresholdRadsPerSecHundredth", "1"},
 		{"GameNetDontSendRedundantDeltaPositionMillionth", "1"},
 		{"InterpolationFrameVelocityThresholdMillionth", "5"},
@@ -845,6 +786,7 @@ local function ResetToWork()
 		{"LargeReplicatorSerializeWrite4", "true"},
 	}
 	for _, data in ipairs(flags) do pcall(function() if setfflag then setfflag(data[1], data[2]) end end) end
+	
 	local char = player.Character
 	if char then
 		local hum = char:FindFirstChildOfClass("Humanoid")
@@ -858,25 +800,113 @@ end
 
 task.spawn(function() task.wait(1) ResetToWork() end)
 
--- ===== LOGIQUE SYSTEME =====
+-- ===== LOGIQUE SYSTEME (Semi TP) =====
 local allAnimalsCache = {}
 local InternalStealCache = {}
 local IsStealing = false
 local StealProgress = 0
-local function getHRP() local char = player.Character return char and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("UpperTorso")) end
-local function isMyBase(plotName) local plot = workspace.Plots:FindFirstChild(plotName) return plot and plot:FindFirstChild("PlotSign") and plot.PlotSign:FindFirstChild("YourBase") and plot.PlotSign.YourBase.Enabled end
-local function scan() table.clear(allAnimalsCache) for _, p in ipairs(workspace.Plots:GetChildren()) do if not isMyBase(p.Name) and p:FindFirstChild("AnimalPodiums") then for _, pod in ipairs(p.AnimalPodiums:GetChildren()) do if pod:FindFirstChild("Base") then table.insert(allAnimalsCache, {plot=p.Name, slot=pod.Name, worldPosition=pod:GetPivot().Position, uid=p.Name.."_"..pod.Name}) end end end end end
-task.spawn(function() while task.wait(5) do scan() end end) scan()
 
-local function buildSteal(prompt) if InternalStealCache[prompt] then return end local d = {hold={}, trig={}, ready=true} local ok1, c1 = pcall(getconnections, prompt.PromptButtonHoldBegan) if ok1 then for _, c in ipairs(c1) do table.insert(d.hold, c.Function) end end local ok2, c2 = pcall(getconnections, prompt.Triggered) if ok2 then for _, c in ipairs(c2) do table.insert(d.trig, c.Function) end end InternalStealCache[prompt] = d end
-local function execSteal(prompt, animal, seq) buildSteal(prompt) local d = InternalStealCache[prompt] if not d or not d.ready or IsStealing then return end d.ready = false IsStealing = true StealProgress = 0 progressBarFill.Size = UDim2.new(0, 0, 1, 0) progressBarFill.BackgroundTransparency = 0 progressBarStroke.Color = BLUE_MAIN local tpDone = false task.spawn(function() for _, f in ipairs(d.hold) do task.spawn(f) end local s = tick() while tick()-s < 1.3 do StealProgress = (tick()-s)/1.3 if not tpDone then progressBarFill.Size = UDim2.new(math.clamp(StealProgress, 0, 1), 0, 1, 0) end if StealProgress >= 0.73 and not tpDone then tpDone = true local hrp = getHRP() if hrp then local b = player:FindFirstChild("Backpack") if b and b:FindFirstChild("Flying Carpet") then player.Character.Humanoid:EquipTool(b["Flying Carpet"]) task.wait(0.1) end hrp.CFrame = seq[1] task.wait(0.1) hrp.CFrame = seq[2] task.wait(0.2) local d1 = (hrp.Position-pos1).Magnitude local d2 = (hrp.Position-pos2).Magnitude hrp.CFrame = CFrame.new(d1<d2 and pos1 or pos2) end progressBarFill.Size = UDim2.new(1, 0, 1, 0) end task.wait() end progressBarFill.Size = UDim2.new(1, 0, 1, 0) for _, f in ipairs(d.trig) do task.spawn(f) end task.wait(0.2) TweenService:Create(progressBarFill, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play() TweenService:Create(progressBarStroke, TweenInfo.new(0.3), {Color = Color3.fromRGB(60, 60, 60)}):Play() task.wait(0.4) progressBarFill.Size = UDim2.new(0, 0, 1, 0) progressBarFill.BackgroundTransparency = 0 d.ready=true IsStealing=false StealProgress=0 end) end
+local function getHRP() 
+	local char = player.Character 
+	return char and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("UpperTorso")) 
+end
+
+local function isMyBase(plotName) 
+	local plot = workspace.Plots:FindFirstChild(plotName) 
+	return plot and plot:FindFirstChild("PlotSign") and plot.PlotSign:FindFirstChild("YourBase") and plot.PlotSign.YourBase.Enabled 
+end
+
+local function scan() 
+	table.clear(allAnimalsCache) 
+	for _, p in ipairs(workspace.Plots:GetChildren()) do 
+		if not isMyBase(p.Name) and p:FindFirstChild("AnimalPodiums") then 
+			for _, pod in ipairs(p.AnimalPodiums:GetChildren()) do 
+				if pod:FindFirstChild("Base") then 
+					table.insert(allAnimalsCache, {plot=p.Name, slot=pod.Name, worldPosition=pod:GetPivot().Position, uid=p.Name.."_"..pod.Name}) 
+				end 
+			end 
+		end 
+	end 
+end
+
+task.spawn(function() while task.wait(5) do scan() end end) 
+scan()
+
+local function buildSteal(prompt) 
+	if InternalStealCache[prompt] then return end 
+	local d = {hold={}, trig={}, ready=true} 
+	local ok1, c1 = pcall(getconnections, prompt.PromptButtonHoldBegan) 
+	if ok1 then for _, c in ipairs(c1) do table.insert(d.hold, c.Function) end end 
+	local ok2, c2 = pcall(getconnections, prompt.Triggered) 
+	if ok2 then for _, c in ipairs(c2) do table.insert(d.trig, c.Function) end end 
+	InternalStealCache[prompt] = d 
+end
+
+local function execSteal(prompt, animal, seq) 
+	buildSteal(prompt) 
+	local d = InternalStealCache[prompt] 
+	if not d or not d.ready or IsStealing then return end 
+	d.ready = false 
+	IsStealing = true 
+	StealProgress = 0 
+	progressBarFill.Size = UDim2.new(0, 0, 1, 0) 
+	progressBarFill.BackgroundTransparency = 0 
+	progressBarStroke.Color = BLUE_MAIN 
+
+	local tpDone = false 
+	task.spawn(function() 
+		for _, f in ipairs(d.hold) do task.spawn(f) end 
+		local s = tick() 
+		while tick()-s < 1.3 do 
+			StealProgress = (tick()-s)/1.3 
+			if not tpDone then 
+				progressBarFill.Size = UDim2.new(math.clamp(StealProgress, 0, 1), 0, 1, 0) 
+			end 
+			if StealProgress >= 0.73 and not tpDone then 
+				tpDone = true 
+				local hrp = getHRP() 
+				if hrp then 
+					local b = player:FindFirstChild("Backpack")
+					if b and b:FindFirstChild("Flying Carpet") then 
+						player.Character.Humanoid:EquipTool(b["Flying Carpet"]) 
+						task.wait(0.1) 
+					end
+					hrp.CFrame = seq[1] 
+					task.wait(0.1) 
+					hrp.CFrame = seq[2] 
+					task.wait(0.2) 
+					local d1 = (hrp.Position-pos1).Magnitude 
+					local d2 = (hrp.Position-pos2).Magnitude 
+					hrp.CFrame = CFrame.new(d1<d2 and pos1 or pos2) 
+				end
+				progressBarFill.Size = UDim2.new(1, 0, 1, 0) 
+			end 
+			task.wait() 
+		end 
+		progressBarFill.Size = UDim2.new(1, 0, 1, 0) 
+		for _, f in ipairs(d.trig) do task.spawn(f) end 
+		task.wait(0.2) 
+		TweenService:Create(progressBarFill, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play() 
+		TweenService:Create(progressBarStroke, TweenInfo.new(0.3), {Color = Color3.fromRGB(60, 60, 60)}):Play() 
+		task.wait(0.4) 
+		progressBarFill.Size = UDim2.new(0, 0, 1, 0) 
+		progressBarFill.BackgroundTransparency = 0 
+		d.ready=true 
+		IsStealing=false 
+		StealProgress=0 
+	end) 
+end
 
 -- ===== STEAL HELPERS =====
 local function doStealLeft()
-	local hrp = getHRP() if not hrp or IsStealing then return end
+	local hrp = getHRP() 
+	if not hrp or IsStealing then return end
 	scan()
 	local target, dist = nil, 200
-	for _, a in ipairs(allAnimalsCache) do local d = (hrp.Position-a.worldPosition).Magnitude if d < dist then dist=d target=a end end
+	for _, a in ipairs(allAnimalsCache) do 
+		local d = (hrp.Position-a.worldPosition).Magnitude 
+		if d < dist then dist=d target=a end 
+	end
 	if target then
 		local p = workspace.Plots[target.plot].AnimalPodiums[target.slot].Base.Spawn.PromptAttachment:FindFirstChildOfClass("ProximityPrompt")
 		if p then execSteal(p, target, spot1_sequence) end
@@ -884,10 +914,14 @@ local function doStealLeft()
 end
 
 local function doStealRight()
-	local hrp = getHRP() if not hrp or IsStealing then return end
+	local hrp = getHRP() 
+	if not hrp or IsStealing then return end
 	scan()
 	local target, dist = nil, 200
-	for _, a in ipairs(allAnimalsCache) do local d = (hrp.Position-a.worldPosition).Magnitude if d < dist then dist=d target=a end end
+	for _, a in ipairs(allAnimalsCache) do 
+		local d = (hrp.Position-a.worldPosition).Magnitude 
+		if d < dist then dist=d target=a end 
+	end
 	if target then
 		local p = workspace.Plots[target.plot].AnimalPodiums[target.slot].Base.Spawn.PromptAttachment:FindFirstChildOfClass("ProximityPrompt")
 		if p then execSteal(p, target, spot2_sequence) end
@@ -898,12 +932,11 @@ end
 btnLeft.MouseButton1Click:Connect(doStealLeft)
 btnRight.MouseButton1Click:Connect(doStealRight)
 
--- ===== TOGGLE MENU + KEYBINDS (DYNAMIC) =====
+-- ===== TOGGLE MENU + KEYBINDS =====
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
 	if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
 
-	-- Si on est en mode écoute, assigner la touche
 	if listeningFor then
 		finishListening(input.KeyCode)
 		return
