@@ -1,956 +1,785 @@
 local Players = game:GetService("Players")
-local lp = Players.LocalPlayer
-
--- =====================================================
--- ATTENTE DU CHARGEMENT (ROBUSTE)
--- =====================================================
-while not lp or not lp.Name or lp.Name == "" or lp.Name == "Player" do
-    task.wait(0.2)
-    lp = Players.LocalPlayer
-end
-
--- ===================== CONTINUATION DU SCRIPT =====================
-local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
+local PathfindingService = game:GetService("PathfindingService")
 local UserInputService = game:GetService("UserInputService")
-local ProximityPromptService = game:GetService("ProximityPromptService")
-local CoreGui = game:GetService("CoreGui")
-local TextChatService = game:GetService("TextChatService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
-local function sendMessage(msg)
-	if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-		local general = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
-		if general then general:SendAsync(msg) end
-	else
-		local remote = ReplicatedStorage:FindFirstChild("SayMessageRequest", true)
-		if remote then remote:FireServer(msg, "All") end
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+
+local waypoints = {}
+local isPlaying = false
+local bestPetModel = nil
+local selectedPetModel = nil
+
+local playerBaseModel = nil
+local playerBaseCached = false
+
+local spawnerHeight = nil
+
+local detectedPets = {}
+
+local originalSizes = {}
+
+local function crunchBody()
+	for _, part in ipairs(character:GetDescendants()) do
+		if part:IsA("BasePart") and part ~= humanoidRootPart then
+			originalSizes[part] = part.Size
+			part.Size = Vector3.new(0.1, 0.1, 0.1)
+		end
 	end
 end
 
-local player = Players.LocalPlayer
-
--- ===================== SAVE / LOAD SETTINGS =====================
-local SETTINGS_FILE = "NoxHubSettings.json"
-local HttpService = game:GetService("HttpService")
-
-local function loadSettings()
-	local ok, data = pcall(function()
-		if isfile and isfile(SETTINGS_FILE) then
-			return HttpService:JSONDecode(readfile(SETTINGS_FILE))
+local function restoreBody()
+	for part, originalSize in pairs(originalSizes) do
+		if part and part.Parent then
+			part.Size = originalSize
 		end
-	end)
-	if ok and data then return data end
-	return nil
+	end
+	originalSizes = {}
 end
 
-local function saveSettings(settings)
-	pcall(function()
-		if writefile then
-			writefile(SETTINGS_FILE, HttpService:JSONEncode(settings))
+local greenPartsCache = {}
+local greenPartsCacheTime = 0
+
+local function findClosestGreenPart(fromPosition)
+	if tick() - greenPartsCacheTime > 5 then
+		greenPartsCache = {}
+		for _, obj in ipairs(workspace:GetDescendants()) do
+			if obj:IsA("BasePart") then
+				local color = obj.Color
+				if math.floor(color.R * 255) == 0 and math.floor(color.G * 255) == 195 and math.floor(color.B * 255) == 0 then
+					table.insert(greenPartsCache, obj)
+				end
+			end
 		end
-	end)
+		greenPartsCacheTime = tick()
+	end
+	
+	local closestPart = nil
+	local closestDistance = math.huge
+	
+	for _, obj in ipairs(greenPartsCache) do
+		if obj and obj.Parent then
+			local distance = (obj.Position - fromPosition).Magnitude
+			if distance < closestDistance then
+				closestDistance = distance
+				closestPart = obj
+			end
+		end
+	end
+	
+	return closestPart
 end
 
-local savedSettings = loadSettings()
-
-local function getCurrentSettings()
-	return {
-		keybinds = {
-			tpLeft = keybinds and keybinds.tpLeft and keybinds.tpLeft.Name or "F",
-			tpRight = keybinds and keybinds.tpRight and keybinds.tpRight.Name or "G",
-			speed = keybinds and keybinds.speed and keybinds.speed.Name or "C",
-			toggle = keybinds and keybinds.toggle and keybinds.toggle.Name or "V",
-			allow = keybinds and keybinds.allow and keybinds.allow.Name or "B"
-		},
-		speedIntensity = speedIntensity,
-		boostSpeed = BOOST_SPEED,
-		menuPosXScale = mainFrame and mainFrame.Position.X.Scale or 1,
-		menuPosXOffset = mainFrame and mainFrame.Position.X.Offset or -255,
-		menuPosYScale = mainFrame and mainFrame.Position.Y.Scale or 0.5,
-		menuPosYOffset = mainFrame and mainFrame.Position.Y.Offset or -122
-	}
-end
-
-local function persistSettings()
-	pcall(function()
-		saveSettings(getCurrentSettings())
-	end)
-end
-
-local pos1 = Vector3.new(-352.98, -7, 74.30)
-local pos2 = Vector3.new(-352.98, -6.49, 45.76)
-local standing1 = Vector3.new(-336.36, -4.59, 99.51)
-local standing2 = Vector3.new(-334.81, -4.59, 18.90)
-
-local spot1_sequence = {
-CFrame.new(-370.810913, -7.00000334, 41.2687263, 0.99984771, 1.22364419e-09, 0.0174523517, -6.54859778e-10, 1, -3.2596418e-08, -0.0174523517, 3.25800258e-08, 0.99984771),
-CFrame.new(-336.355286, -5.10107088, 17.2327671, -0.999883354, -2.76150569e-08, 0.0152716246, -2.88224964e-08, 1, -7.88441525e-08, -0.0152716246, -7.9275118e-08, -0.999883354)
-}
-
-local spot2_sequence = {
-CFrame.new(-354.782867, -7.00000334, 92.8209305, -0.999997616, -1.11891862e-09, -0.00218066527, -1.11958298e-09, 1, 3.03415071e-10, 0.00218066527, 3.05855785e-10, -0.999997616),
-CFrame.new(-336.942902, -5.10106993, 99.3276443, 0.999914348, -3.63984611e-08, 0.0130875716, 3.67094941e-08, 1, -2.35254749e-08, -0.0130875716, 2.40038975e-08, 0.999914348)
-}
-
-if CoreGui:FindFirstChild("NoxHubGui") then
-	CoreGui["NoxHubGui"]:Destroy()
+local function checkObstacleAbove(fromPosition, maxDistance)
+	maxDistance = maxDistance or 50
+	
+	local raycastParams = RaycastParams.new()
+	raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+	raycastParams.FilterDescendantsInstances = {character}
+	
+	local rayDirection = Vector3.new(0, maxDistance, 0)
+	local raycastResult = workspace:Raycast(fromPosition, rayDirection, raycastParams)
+	
+	if raycastResult then
+		return true, raycastResult.Position, raycastResult.Distance
+	end
+	
+	return false, nil, nil
 end
 
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "NoxHubGui"
+screenGui.Name = "VsterCarpetTPGui"
 screenGui.ResetOnSpawn = false
-screenGui.Parent = CoreGui
-
--- ===================== UI SEMI TP BY HUGO =====================
-local BLUE_MAIN = Color3.fromRGB(255, 50, 50)
-local BLUE_TEXT = Color3.fromRGB(255, 80, 80)
-local BLUE_GLOW = Color3.fromRGB(200, 30, 30)
-local BLUE_BRIGHT = Color3.fromRGB(220, 40, 40)
-local BG_DARK = Color3.fromRGB(15, 15, 15)
-local BG_BUTTON = Color3.fromRGB(30, 30, 30)
-local KEYBIND_BG = Color3.fromRGB(45, 45, 45)
-local KEYBIND_TEXT = Color3.fromRGB(180, 180, 180)
+screenGui.Parent = player:WaitForChild("PlayerGui")
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 240, 0, 275)
-mainFrame.Position = savedSettings and UDim2.new(savedSettings.menuPosXScale, savedSettings.menuPosXOffset, savedSettings.menuPosYScale, savedSettings.menuPosYOffset) or UDim2.new(1, -255, 0.5, -122)
-mainFrame.AnchorPoint = Vector2.new(0, 0.5)
-mainFrame.BackgroundColor3 = BG_DARK
-mainFrame.BackgroundTransparency = 0.12
+if isMobile then
+	mainFrame.Size = UDim2.new(0, 220, 0, 350)
+	mainFrame.Position = UDim2.new(0.5, -110, 0, 10)
+else
+	mainFrame.Size = UDim2.new(0, 280, 0, 450)
+	mainFrame.Position = UDim2.new(1, -300, 0, 20)
+end
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 mainFrame.BorderSizePixel = 0
-mainFrame.Active = true
 mainFrame.Parent = screenGui
 
-Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 10)
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 8)
+corner.Parent = mainFrame
 
--- ===== TITLE =====
-local hubTitle = Instance.new("TextLabel")
-hubTitle.Size = UDim2.new(1, 0, 0, 20)
-hubTitle.Position = UDim2.new(0, 0, 0, 4)
-hubTitle.BackgroundTransparency = 1
-hubTitle.Text = "SEMI TP BY HUGO"
-hubTitle.TextColor3 = BLUE_MAIN
-hubTitle.TextSize = 14
-hubTitle.Font = Enum.Font.GothamBlack
-hubTitle.TextStrokeTransparency = 1
-hubTitle.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-hubTitle.Parent = mainFrame
+local titleBar = Instance.new("Frame")
+titleBar.Name = "TitleBar"
+titleBar.Size = UDim2.new(1, 0, 0, isMobile and 30 or 35)
+titleBar.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+titleBar.BorderSizePixel = 0
+titleBar.Parent = mainFrame
 
--- Toggle Menu: V
-local toggleLabel = Instance.new("TextLabel")
-toggleLabel.Size = UDim2.new(1, 0, 0, 18)
-toggleLabel.Position = UDim2.new(0, 0, 0, 24)
-toggleLabel.BackgroundTransparency = 1
-toggleLabel.Text = "Toggle Menu: V"
-toggleLabel.TextColor3 = BLUE_TEXT
-toggleLabel.TextSize = 10
-toggleLabel.Font = Enum.Font.GothamMedium
-toggleLabel.TextStrokeTransparency = 1
-toggleLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-toggleLabel.Parent = mainFrame
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0, 8)
+titleCorner.Parent = titleBar
 
--- ===== KEYBIND SYSTEM =====
-local kbLeft, kbRight, speedKeybind, allowKeybind
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, -10, 1, 0)
+titleLabel.Position = UDim2.new(0, 10, 0, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "Vster Carpet TP"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextSize = isMobile and 13 or 16
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Parent = titleBar
 
-local function resolveKeyCode(name, default)
-	local ok, kc = pcall(function() return Enum.KeyCode[name] end)
-	if ok and kc then return kc end
-	return default
+local targetFrame = Instance.new("Frame")
+targetFrame.Name = "TargetFrame"
+targetFrame.Size = UDim2.new(1, -20, 0, isMobile and 40 or 50)
+targetFrame.Position = UDim2.new(0, 10, 0, isMobile and 35 or 45)
+targetFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+targetFrame.BorderSizePixel = 0
+targetFrame.Parent = mainFrame
+
+local targetCorner = Instance.new("UICorner")
+targetCorner.CornerRadius = UDim.new(0, 6)
+targetCorner.Parent = targetFrame
+
+local targetTitle = Instance.new("TextLabel")
+targetTitle.Size = UDim2.new(1, -10, 0, isMobile and 15 or 18)
+targetTitle.Position = UDim2.new(0, 5, 0, 3)
+targetTitle.BackgroundTransparency = 1
+targetTitle.Text = "Current Target:"
+targetTitle.TextColor3 = Color3.fromRGB(150, 150, 155)
+targetTitle.TextSize = isMobile and 9 or 11
+targetTitle.Font = Enum.Font.Gotham
+targetTitle.TextXAlignment = Enum.TextXAlignment.Left
+targetTitle.Parent = targetFrame
+
+local targetLabel = Instance.new("TextLabel")
+targetLabel.Name = "TargetLabel"
+targetLabel.Size = UDim2.new(1, -10, 0, isMobile and 20 or 24)
+targetLabel.Position = UDim2.new(0, 5, 0, isMobile and 18 or 23)
+targetLabel.BackgroundTransparency = 1
+targetLabel.Text = "None Selected"
+targetLabel.TextColor3 = Color3.fromRGB(255, 215, 85)
+targetLabel.TextSize = isMobile and 10 or 13
+targetLabel.Font = Enum.Font.GothamBold
+targetLabel.TextXAlignment = Enum.TextXAlignment.Left
+targetLabel.TextTruncate = Enum.TextTruncate.AtEnd
+targetLabel.Parent = targetFrame
+
+local tpButton = Instance.new("TextButton")
+tpButton.Name = "TpButton"
+tpButton.Size = UDim2.new(1, -20, 0, isMobile and 30 or 35)
+tpButton.Position = UDim2.new(0, 10, 0, isMobile and 80 or 105)
+tpButton.BackgroundColor3 = Color3.fromRGB(85, 170, 255)
+tpButton.BorderSizePixel = 0
+tpButton.Text = isMobile and "Teleport (Z)" or "Teleport to Target (Z)"
+tpButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+tpButton.TextSize = isMobile and 11 or 13
+tpButton.Font = Enum.Font.GothamBold
+tpButton.AutoButtonColor = false
+tpButton.Parent = mainFrame
+
+local tpCorner = Instance.new("UICorner")
+tpCorner.CornerRadius = UDim.new(0, 6)
+tpCorner.Parent = tpButton
+
+local scrollFrame = Instance.new("ScrollingFrame")
+scrollFrame.Name = "PetList"
+scrollFrame.Size = UDim2.new(1, -20, 1, isMobile and -125 or -160)
+scrollFrame.Position = UDim2.new(0, 10, 0, isMobile and 115 or 150)
+scrollFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+scrollFrame.BorderSizePixel = 0
+scrollFrame.ScrollBarThickness = isMobile and 4 or 6
+scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 85)
+scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+scrollFrame.Parent = mainFrame
+
+local scrollCorner = Instance.new("UICorner")
+scrollCorner.CornerRadius = UDim.new(0, 6)
+scrollCorner.Parent = scrollFrame
+
+local listLayout = Instance.new("UIListLayout")
+listLayout.Padding = UDim.new(0, isMobile and 3 or 5)
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout.Parent = scrollFrame
+
+local dragging = false
+local dragInput, dragStart, startPos
+
+local function update(input)
+	local delta = input.Position - dragStart
+	mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
 end
 
-local keybinds = {
-	tpLeft = savedSettings and resolveKeyCode(savedSettings.keybinds.tpLeft, Enum.KeyCode.F) or Enum.KeyCode.F,
-	tpRight = savedSettings and resolveKeyCode(savedSettings.keybinds.tpRight, Enum.KeyCode.G) or Enum.KeyCode.G,
-	speed = savedSettings and resolveKeyCode(savedSettings.keybinds.speed, Enum.KeyCode.C) or Enum.KeyCode.C,
-	toggle = savedSettings and resolveKeyCode(savedSettings.keybinds.toggle, Enum.KeyCode.V) or Enum.KeyCode.V,
-	allow = savedSettings and resolveKeyCode(savedSettings.keybinds.allow, Enum.KeyCode.B) or Enum.KeyCode.B
-}
-
-local listeningFor = nil
-local listeningLabel = nil
-
-local function startListening(bindName, label)
-	if listeningFor then return end
-	listeningFor = bindName
-	listeningLabel = label
-	label.Text = "..."
-	label.TextColor3 = Color3.fromRGB(255, 220, 80)
-	label.BackgroundColor3 = Color3.fromRGB(80, 30, 30)
-end
-
-local function finishListening(keyCode)
-	if not listeningFor then return false end
-	-- Empêcher les doublons
-	for name, key in pairs(keybinds) do
-		if key == keyCode and name ~= listeningFor then
-			keybinds[name] = Enum.KeyCode.Unknown
-			if name == "tpLeft" and kbLeft then kbLeft.Text = "-" end
-			if name == "tpRight" and kbRight then kbRight.Text = "-" end
-			if name == "speed" then speedKeybind.Text = "-" end
-			if name == "allow" and allowKeybind then allowKeybind.Text = "-" end
-		end
-	end
-	keybinds[listeningFor] = keyCode
-	listeningLabel.Text = keyCode.Name
-	listeningLabel.TextColor3 = KEYBIND_TEXT
-	listeningLabel.BackgroundColor3 = KEYBIND_BG
-	listeningFor = nil
-	listeningLabel = nil
-	persistSettings()
-	return true
-end
-
--- ===== ROW HELPER =====
-local function createRow(parent, yPos, labelText, keybindChar, bindName)
-	local row = Instance.new("Frame")
-	row.Size = UDim2.new(0.9, 0, 0, 30)
-	row.Position = UDim2.new(0.05, 0, 0, yPos)
-	row.BackgroundTransparency = 1
-	row.Parent = parent
-
-	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(1, -38, 1, 0)
-	btn.Position = UDim2.new(0, 0, 0, 0)
-	btn.BackgroundColor3 = BG_BUTTON
-	btn.BackgroundTransparency = 0
-	btn.Text = labelText
-	btn.TextColor3 = BLUE_TEXT
-	btn.TextSize = 14
-	btn.Font = Enum.Font.GothamBold
-	btn.TextXAlignment = Enum.TextXAlignment.Center
-	btn.TextStrokeTransparency = 1
-	btn.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-	btn.Parent = row
-	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
-	local btnStroke = Instance.new("UIStroke", btn)
-	btnStroke.Thickness = 1.5
-	btnStroke.Color = BLUE_MAIN
-
-	local originalPos = UDim2.new(0.05, 0, 0, yPos)
-	btn.MouseButton1Down:Connect(function()
-		TweenService:Create(row, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Size = UDim2.new(0.85, 0, 0, 26),
-			Position = UDim2.new(0.075, 0, 0, yPos + 2)
-		}):Play()
-		TweenService:Create(btn, TweenInfo.new(0.08), {
-			TextColor3 = Color3.fromRGB(220, 60, 60),
-			BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-		}):Play()
-		TweenService:Create(btnStroke, TweenInfo.new(0.08), {Color = Color3.fromRGB(200, 40, 40)}):Play()
-	end)
-	btn.MouseButton1Up:Connect(function()
-		TweenService:Create(row, TweenInfo.new(0.12, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-			Size = UDim2.new(0.9, 0, 0, 30),
-			Position = originalPos
-		}):Play()
-		TweenService:Create(btn, TweenInfo.new(0.12), {
-			TextColor3 = BLUE_TEXT,
-			BackgroundColor3 = BG_BUTTON
-		}):Play()
-		TweenService:Create(btnStroke, TweenInfo.new(0.12), {Color = BLUE_MAIN}):Play()
-	end)
-	btn.MouseLeave:Connect(function()
-		TweenService:Create(row, TweenInfo.new(0.12, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-			Size = UDim2.new(0.9, 0, 0, 30),
-			Position = originalPos
-		}):Play()
-		TweenService:Create(btn, TweenInfo.new(0.12), {
-			TextColor3 = BLUE_TEXT,
-			BackgroundColor3 = BG_BUTTON
-		}):Play()
-		TweenService:Create(btnStroke, TweenInfo.new(0.12), {Color = BLUE_MAIN}):Play()
-	end)
-
-	local keybindBtn = Instance.new("TextButton")
-	keybindBtn.Size = UDim2.new(0, 26, 0, 22)
-	keybindBtn.Position = UDim2.new(1, -28, 0.5, -11)
-	keybindBtn.BackgroundColor3 = KEYBIND_BG
-	keybindBtn.BackgroundTransparency = 0.2
-	keybindBtn.Text = keybindChar
-	keybindBtn.TextColor3 = KEYBIND_TEXT
-	keybindBtn.TextSize = 12
-	keybindBtn.Font = Enum.Font.GothamBold
-	keybindBtn.Parent = row
-	Instance.new("UICorner", keybindBtn).CornerRadius = UDim.new(0, 5)
-	keybindBtn.MouseButton1Click:Connect(function()
-		startListening(bindName, keybindBtn)
-	end)
-
-	return row, btn, keybindBtn
-end
-
--- Row 1: Auto tp Left (F)
-local row1, btnLeft
-row1, btnLeft, kbLeft = createRow(mainFrame, 46, "Auto tp Left", keybinds.tpLeft.Name, "tpLeft")
-
--- Row 2: Auto tp Right (G)
-local row2, btnRight
-row2, btnRight, kbRight = createRow(mainFrame, 80, "Auto tp Right", keybinds.tpRight.Name, "tpRight")
-
--- ===== PROGRESS BAR =====
-local progressBarBg = Instance.new("Frame")
-progressBarBg.Size = UDim2.new(0.9, 0, 0, 8)
-progressBarBg.Position = UDim2.new(0.05, 0, 0, 114)
-progressBarBg.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-progressBarBg.BackgroundTransparency = 0.2
-progressBarBg.BorderSizePixel = 0
-progressBarBg.Parent = mainFrame
-Instance.new("UICorner", progressBarBg).CornerRadius = UDim.new(0, 4)
-local progressBarStroke = Instance.new("UIStroke", progressBarBg)
-progressBarStroke.Thickness = 1
-progressBarStroke.Color = Color3.fromRGB(60, 60, 60)
-
-local progressBarFill = Instance.new("Frame")
-progressBarFill.Size = UDim2.new(0, 0, 1, 0)
-progressBarFill.Position = UDim2.new(0, 0, 0, 0)
-progressBarFill.BackgroundColor3 = BLUE_MAIN
-progressBarFill.BorderSizePixel = 0
-progressBarFill.Parent = progressBarBg
-Instance.new("UICorner", progressBarFill).CornerRadius = UDim.new(0, 4)
-
-local progressGradient = Instance.new("UIGradient")
-progressGradient.Color = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(200, 30, 30)),
-	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 50, 50)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 100, 80))
-})
-progressGradient.Parent = progressBarFill
-
--- ===== Enable Speed Button (C) =====
-local speedRow = Instance.new("Frame")
-speedRow.Size = UDim2.new(0.9, 0, 0, 34)
-speedRow.Position = UDim2.new(0.05, 0, 0, 130)
-speedRow.BackgroundTransparency = 1
-speedRow.Parent = mainFrame
-
-local speedButton = Instance.new("TextButton")
-speedButton.Size = UDim2.new(1, -82, 1, 0)
-speedButton.Position = UDim2.new(0, 0, 0, 0)
-speedButton.BackgroundColor3 = BLUE_BRIGHT
-speedButton.Text = "Enable Speed"
-speedButton.TextColor3 = Color3.fromRGB(15, 15, 15)
-speedButton.TextSize = 14
-speedButton.Font = Enum.Font.GothamBold
-speedButton.Parent = speedRow
-Instance.new("UICorner", speedButton).CornerRadius = UDim.new(0, 8)
-local speedStroke = Instance.new("UIStroke", speedButton)
-speedStroke.Thickness = 2
-speedStroke.Color = BLUE_MAIN
-
-local speedInputBox = Instance.new("TextBox")
-speedInputBox.Size = UDim2.new(0, 36, 0, 26)
-speedInputBox.Position = UDim2.new(1, -70, 0.5, -13)
-speedInputBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-speedInputBox.Text = savedSettings and tostring(savedSettings.speedIntensity) or "27"
-speedInputBox.TextColor3 = BLUE_TEXT
-speedInputBox.TextSize = 13
-speedInputBox.Font = Enum.Font.GothamBold
-speedInputBox.TextXAlignment = Enum.TextXAlignment.Center
-speedInputBox.ClearTextOnFocus = false
-speedInputBox.Parent = speedRow
-Instance.new("UICorner", speedInputBox).CornerRadius = UDim.new(0, 6)
-local speedInputStroke = Instance.new("UIStroke", speedInputBox)
-speedInputStroke.Color = BLUE_MAIN
-speedInputStroke.Thickness = 1
-
-speedInputBox:GetPropertyChangedSignal("Text"):Connect(function()
-	local val = tonumber(speedInputBox.Text)
-	if val then
-		BOOST_SPEED = val
-		speedIntensity = val
-		persistSettings()
+titleBar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = mainFrame.Position
+		
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
 	end
 end)
 
-speedKeybind = Instance.new("TextButton")
-speedKeybind.Size = UDim2.new(0, 26, 0, 22)
-speedKeybind.Position = UDim2.new(1, -28, 0.5, -11)
-speedKeybind.BackgroundColor3 = KEYBIND_BG
-speedKeybind.BackgroundTransparency = 0.2
-speedKeybind.Text = keybinds.speed.Name
-speedKeybind.TextColor3 = KEYBIND_TEXT
-speedKeybind.TextSize = 12
-speedKeybind.Font = Enum.Font.GothamBold
-speedKeybind.Parent = speedRow
-Instance.new("UICorner", speedKeybind).CornerRadius = UDim.new(0, 5)
-speedKeybind.MouseButton1Click:Connect(function()
-	startListening("speed", speedKeybind)
+titleBar.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
 end)
 
-local speedEnabled = false
-local speedIntensity = savedSettings and savedSettings.speedIntensity or 28
-
--- ===== Disallow / Allow Toggle =====
-local allowRow = Instance.new("Frame")
-allowRow.Size = UDim2.new(0.9, 0, 0, 34)
-allowRow.Position = UDim2.new(0.05, 0, 0, 168)
-allowRow.BackgroundTransparency = 1
-allowRow.Parent = mainFrame
-
-local allowToggle = Instance.new("TextButton")
-allowToggle.Size = UDim2.new(1, -38, 1, 0)
-allowToggle.Position = UDim2.new(0, 0, 0, 0)
-allowToggle.BackgroundColor3 = BG_BUTTON
-allowToggle.Text = "Disallow"
-allowToggle.TextColor3 = BLUE_TEXT
-allowToggle.TextSize = 14
-allowToggle.Font = Enum.Font.GothamBold
-allowToggle.TextStrokeTransparency = 1
-allowToggle.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-allowToggle.Parent = allowRow
-Instance.new("UICorner", allowToggle).CornerRadius = UDim.new(0, 8)
-local allowStroke = Instance.new("UIStroke", allowToggle)
-allowStroke.Thickness = 1.5
-allowStroke.Color = BLUE_MAIN
-
-allowKeybind = Instance.new("TextButton")
-allowKeybind.Size = UDim2.new(0, 26, 0, 22)
-allowKeybind.Position = UDim2.new(1, -28, 0.5, -11)
-allowKeybind.BackgroundColor3 = KEYBIND_BG
-allowKeybind.BackgroundTransparency = 0.2
-allowKeybind.Text = keybinds.allow.Name
-allowKeybind.TextColor3 = KEYBIND_TEXT
-allowKeybind.TextSize = 12
-allowKeybind.Font = Enum.Font.GothamBold
-allowKeybind.Parent = allowRow
-Instance.new("UICorner", allowKeybind).CornerRadius = UDim.new(0, 5)
-allowKeybind.MouseButton1Click:Connect(function()
-	startListening("allow", allowKeybind)
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		update(input)
+	end
 end)
 
-local isAllowed = false
+local function parseMoney(text)
+	text = string.lower(text or "")
+	local num = tonumber(text:match("[%d%.]+")) or 0
+	if text:find("k") then
+		num *= 1e3
+	elseif text:find("m") then
+		num *= 1e6
+	elseif text:find("b") then
+		num *= 1e9
+	elseif text:find("t") then
+		num *= 1e12
+	end
+	return num
+end
 
--- Press-down effect
-local allowOriginalPos = UDim2.new(0.05, 0, 0, 168)
-allowToggle.MouseButton1Down:Connect(function()
-	TweenService:Create(allowRow, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		Size = UDim2.new(0.85, 0, 0, 30),
-		Position = UDim2.new(0.075, 0, 0, 170)
-	}):Play()
-	TweenService:Create(allowToggle, TweenInfo.new(0.08), {
-		TextColor3 = Color3.fromRGB(220, 60, 60),
-		BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-	}):Play()
-	TweenService:Create(allowStroke, TweenInfo.new(0.08), {Color = Color3.fromRGB(200, 40, 40)}):Play()
-end)
-allowToggle.MouseButton1Up:Connect(function()
-	TweenService:Create(allowRow, TweenInfo.new(0.12, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-		Size = UDim2.new(0.9, 0, 0, 34),
-		Position = allowOriginalPos
-	}):Play()
-	TweenService:Create(allowToggle, TweenInfo.new(0.12), {
-		TextColor3 = BLUE_TEXT,
-		BackgroundColor3 = BG_BUTTON
-	}):Play()
-	TweenService:Create(allowStroke, TweenInfo.new(0.12), {Color = BLUE_MAIN}):Play()
-end)
-allowToggle.MouseLeave:Connect(function()
-	TweenService:Create(allowRow, TweenInfo.new(0.12, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-		Size = UDim2.new(0.9, 0, 0, 34),
-		Position = allowOriginalPos
-	}):Play()
-	TweenService:Create(allowToggle, TweenInfo.new(0.12), {
-		TextColor3 = BLUE_TEXT,
-		BackgroundColor3 = BG_BUTTON
-	}):Play()
-	TweenService:Create(allowStroke, TweenInfo.new(0.12), {Color = BLUE_MAIN}):Play()
-end)
+local function formatMoney(value)
+	if value >= 1e12 then
+		return string.format("$%.2fT/s", value / 1e12)
+	elseif value >= 1e9 then
+		return string.format("$%.2fB/s", value / 1e9)
+	elseif value >= 1e6 then
+		return string.format("$%.2fM/s", value / 1e6)
+	elseif value >= 1e3 then
+		return string.format("$%.2fK/s", value / 1e3)
+	else
+		return string.format("$%.2f/s", value)
+	end
+end
 
--- ===== TOGGLE FRIENDS ACCESS =====
-local function findMyPlot()
-	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-	if not hrp then return nil end
-	local closest, cd = nil, 999
-	for _, plot in ipairs(workspace.Plots:GetChildren()) do
-		local fp = plot:FindFirstChild("FriendPanel")
-		if fp then
-			local m = fp:FindFirstChild("Main")
-			if m and m:IsA("BasePart") then
-				local d = (hrp.Position - m.Position).Magnitude
-				if d < cd then cd = d; closest = plot end
+local billboardCache = nil
+local billboardCacheTime = 0
+
+local function findBaseBillboard()
+	if tick() - billboardCacheTime < 30 and billboardCache then
+		return billboardCache
+	end
+	
+	local visibleBillboards = {}
+	for _, obj in ipairs(workspace:GetDescendants()) do
+		if obj:IsA("BillboardGui") and obj.Enabled then
+			for _, child in ipairs(obj:GetDescendants()) do
+				if child:IsA("TextLabel") and child.Visible then
+					if string.upper(child.Text) == "YOUR BASE" and child.TextTransparency < 1 then
+						table.insert(visibleBillboards, obj)
+					end
+				end
 			end
 		end
 	end
-	return closest
-end
-
-local function toggleFriendsAccess()
-	local mp = findMyPlot()
-	if not mp then return end
-	local fp = mp:FindFirstChild("FriendPanel")
-	if not fp then return end
-	local m = fp:FindFirstChild("Main")
-	if not m then return end
-	local pp = m:FindFirstChild("ProximityPrompt")
-	if pp then
-		fireproximityprompt(pp)
-	end
-end
-
--- ===== ESP BASES (always on) =====
-local esp_items_blood = {}
-
-local function isFriendsBlocked(plot)
-	local fp = plot:FindFirstChild("FriendPanel")
-	local mn = fp and fp:FindFirstChild("Main")
-	local sGui = mn and mn:FindFirstChild("SurfaceGui")
-	local img = sGui and (sGui:FindFirstChild("ImageLabel") or sGui:FindFirstChildOfClass("ImageLabel"))
-	if img then
-		local id = tostring(img.Image)
-		if string.find(id, "110783679426495") then return false else return true end
-	end
-	for _, d in ipairs(plot:GetDescendants()) do
-		if d:IsA("BasePart") and d.Material == Enum.Material.Neon then
-			local c = d.Color
-			if c.R > c.G + 0.3 and c.R > c.B + 0.3 and d.Transparency < 0.8 then return true end
-		end
-		local ln = string.lower(d.Name)
-		if (ln == "barrier" or ln == "lockwall") and d:IsA("BasePart") and d.CanCollide and d.Transparency < 0.9 then return true end
-	end
-	local iw = plot:FindFirstChild("InvisibleWalls")
-	if iw then
-		for _, p in ipairs(iw:GetChildren()) do
-			if p:IsA("BasePart") and p.CanCollide and p.Transparency < 0.9 then return true end
+	
+	if #visibleBillboards > 1 and player.Character then
+		local root = player.Character:FindFirstChild("HumanoidRootPart")
+		if root then
+			local closest, closestDist
+			for _, billboard in ipairs(visibleBillboards) do
+				local pos
+				if billboard.Parent and billboard.Parent:IsA("BasePart") then
+					pos = billboard.Parent.Position
+				elseif billboard.Parent and billboard.Parent:IsA("Model") then
+					local part = billboard.Parent:FindFirstChildWhichIsA("BasePart", true)
+					if part then
+						pos = part.Position
+					end
+				end
+				
+				if pos then
+					local dist = (pos - root.Position).Magnitude
+					if not closest or dist < closestDist then
+						closestDist = dist
+						closest = billboard
+					end
+				end
+			end
+			
+			if closest then
+				billboardCache = closest
+				billboardCacheTime = tick()
+				return closest
+			end
 		end
 	end
+	
+	if visibleBillboards[1] then
+		billboardCache = visibleBillboards[1]
+		billboardCacheTime = tick()
+	end
+	
+	return visibleBillboards[1]
+end
+
+local function findPlayerBase()
+	if playerBaseCached then return end
+	
+	local billboard = findBaseBillboard()
+	if billboard then
+		local baseModel = billboard.Parent
+		if baseModel then
+			local parentModel = baseModel.Parent
+			if parentModel and (parentModel:IsA("Model") or parentModel:IsA("Folder")) then
+				playerBaseModel = parentModel
+				playerBaseCached = true
+				return
+			end
+			if baseModel:IsA("Model") or baseModel:IsA("Folder") then
+				playerBaseModel = baseModel
+				playerBaseCached = true
+				return
+			end
+		end
+	end
+end
+
+local function findPlayerSpawner()
+	local fallbackHeight = humanoidRootPart.Position.Y
+	
+	if playerBaseModel then
+		for _, obj in ipairs(playerBaseModel:GetChildren()) do
+			if obj:IsA("Model") and (obj.Name == "Spawner" or obj.Name:lower():find("spawn")) then
+				local spawnerPart = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+				if spawnerPart then
+					return spawnerPart.Position.Y
+				end
+			end
+		end
+	end
+	
+	return fallbackHeight
+end
+
+local function updateSpawnerHeight()
+	spawnerHeight = findPlayerSpawner()
+end
+
+local plotsCache = {}
+local plotsCacheTime = 0
+
+local function findAllPlots()
+	if tick() - plotsCacheTime < 60 and #plotsCache > 0 then
+		return plotsCache
+	end
+	
+	plotsCache = {}
+	
+	for _, obj in ipairs(workspace:GetDescendants()) do
+		if obj:IsA("Model") and (obj.Name:lower():find("plot") or obj.Name:lower():find("base")) then
+			for _, part in ipairs(obj:GetDescendants()) do
+				if part:IsA("BasePart") then
+					table.insert(plotsCache, part)
+				end
+			end
+		end
+	end
+	
+	plotsCacheTime = tick()
+	return plotsCache
+end
+
+local function isPetNearPlayerBase(petPart)
+	if not petPart or not playerBaseModel then return false end
+	
+	if petPart:IsDescendantOf(playerBaseModel) then
+		return true
+	end
+	
+	for _, basePart in ipairs(playerBaseModel:GetDescendants()) do
+		if basePart:IsA("BasePart") then
+			local distance = (basePart.Position - petPart.Position).Magnitude
+			if distance <= 15 then
+				return true
+			end
+		end
+	end
+	
 	return false
 end
 
-local function clearEspBlood()
-	for _, item in ipairs(esp_items_blood) do pcall(function() item:Destroy() end) end
-	esp_items_blood = {}
-end
-
-local function updateEspBlood()
-	clearEspBlood()
-	local my_plot = findMyPlot()
-	for _, plot in ipairs(workspace.Plots:GetChildren()) do
-		if plot ~= my_plot then
-			local fp = plot:FindFirstChild("FriendPanel")
-			if not fp then continue end
-			local anchor = fp:FindFirstChild("Main")
-			if not anchor or not anchor:IsA("BasePart") then continue end
-			pcall(function()
-				local blocked = not isFriendsBlocked(plot)
-				local col = blocked and Color3.fromRGB(255, 60, 50) or Color3.fromRGB(50, 255, 60)
-				local bb = Instance.new("BillboardGui")
-				bb.Name = "NoxESP"
-				bb.Size = UDim2.new(0, 140, 0, 30)
-				bb.StudsOffset = Vector3.new(0, 3.5, 0)
-				bb.AlwaysOnTop = true
-				bb.Adornee = anchor
-				bb.Parent = CoreGui
-				local txt = Instance.new("TextLabel", bb)
-				txt.Size = UDim2.new(1, 0, 1, 0)
-				txt.BackgroundTransparency = 1
-				if blocked then
-					txt.Text = "🔒 DISALLOWED"
-				else
-					txt.Text = "✅ ALLOWED"
-				end
-				txt.TextColor3 = col
-				txt.TextSize = 14
-				txt.Font = Enum.Font.GothamBlack
-				txt.TextStrokeTransparency = 0.15
-				txt.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-				table.insert(esp_items_blood, bb)
-			end)
+local function isPetNearAnyPlot(petPart)
+	if not petPart then return false end
+	
+	local allPlots = findAllPlots()
+	
+	for _, plotPart in ipairs(allPlots) do
+		local distance = (plotPart.Position - petPart.Position).Magnitude
+		if distance <= 23 then
+			return true
 		end
 	end
+	
+	return false
 end
 
--- Start ESP automatically
 task.spawn(function()
-	while screenGui and screenGui.Parent do
-		updateEspBlood()
-		task.wait(1)
+	findPlayerBase()
+	updateSpawnerHeight()
+	
+	while true do
+		task.wait(30)
+		if playerBaseCached then
+			updateSpawnerHeight()
+		else
+			findPlayerBase()
+		end
 	end
-	clearEspBlood()
 end)
 
-local function toggleAllow()
-	isAllowed = not isAllowed
-	if isAllowed then
-		allowToggle.Text = "Allow"
-		allowToggle.BackgroundColor3 = BLUE_BRIGHT
-		allowToggle.TextColor3 = Color3.fromRGB(15, 15, 15)
-	else
-		allowToggle.Text = "Disallow"
-		allowToggle.BackgroundColor3 = BG_BUTTON
-		allowToggle.TextColor3 = BLUE_TEXT
+local function findAllPetsInDebris()
+	local results = {}
+	
+	local debrisFolder = workspace:FindFirstChild("Debris")
+	if not debrisFolder then
+		return results
 	end
-	toggleFriendsAccess()
-end
-
-local function ragdollYourself()
-	sendMessage(":ragdoll " .. player.Name)
-end
-
-allowToggle.MouseButton1Click:Connect(toggleAllow)
-
--- ===== RAGDOLL YOURSELF BUTTON =====
-local ragdollYourselfRow = Instance.new("Frame")
-ragdollYourselfRow.Size = UDim2.new(0.9, 0, 0, 34)
-ragdollYourselfRow.Position = UDim2.new(0.05, 0, 0, 204)
-ragdollYourselfRow.BackgroundTransparency = 1
-ragdollYourselfRow.Parent = mainFrame
-
-local ragdollYourselfButton = Instance.new("TextButton")
-ragdollYourselfButton.Size = UDim2.new(1, 0, 1, 0)
-ragdollYourselfButton.Position = UDim2.new(0, 0, 0, 0)
-ragdollYourselfButton.BackgroundColor3 = BG_BUTTON
-ragdollYourselfButton.Text = "Ragdoll Yourself"
-ragdollYourselfButton.TextColor3 = BLUE_TEXT
-ragdollYourselfButton.TextSize = 14
-ragdollYourselfButton.Font = Enum.Font.GothamBold
-ragdollYourselfButton.TextStrokeTransparency = 1
-ragdollYourselfButton.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-ragdollYourselfButton.Parent = ragdollYourselfRow
-Instance.new("UICorner", ragdollYourselfButton).CornerRadius = UDim.new(0, 8)
-local ragdollYourselfStroke = Instance.new("UIStroke", ragdollYourselfButton)
-ragdollYourselfStroke.Thickness = 1.5
-ragdollYourselfStroke.Color = BLUE_MAIN
-
-ragdollYourselfButton.MouseButton1Click:Connect(ragdollYourself)
-
-ragdollYourselfButton.MouseButton1Down:Connect(function()
-	TweenService:Create(ragdollYourselfRow, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		Size = UDim2.new(0.85, 0, 0, 30),
-		Position = UDim2.new(0.075, 0, 0, 206)
-	}):Play()
-end)
-ragdollYourselfButton.MouseButton1Up:Connect(function()
-	TweenService:Create(ragdollYourselfRow, TweenInfo.new(0.12, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-		Size = UDim2.new(0.9, 0, 0, 34),
-		Position = UDim2.new(0.05, 0, 0, 204)
-	}):Play()
-end)
-
--- ===== TIKTOK LINK =====
-local tiktokLabel = Instance.new("TextLabel")
-tiktokLabel.Size = UDim2.new(1, 0, 0, 22)
-tiktokLabel.Position = UDim2.new(0, 0, 0, 246)
-tiktokLabel.BackgroundTransparency = 1
-tiktokLabel.Text = "tiktok: haleyy68z"
-tiktokLabel.TextColor3 = Color3.fromRGB(220, 60, 60)
-tiktokLabel.TextSize = 13
-tiktokLabel.Font = Enum.Font.GothamBold
-tiktokLabel.TextStrokeTransparency = 1
-tiktokLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-tiktokLabel.Parent = mainFrame
-
--- ===== SPEED LOGIC =====
-local speedConnection = nil
-
-local boostEnabled = false
-local BOOST_SPEED = savedSettings and savedSettings.boostSpeed or 27
-local boostConn
-local startBoost, stopBoost
-
-local function toggleSpeed()
-	speedEnabled = not speedEnabled
-	if speedEnabled then
-		speedButton.Text = "Disable Speed"
-		speedButton.BackgroundColor3 = Color3.fromRGB(180, 30, 30)
-		speedButton.TextColor3 = Color3.fromRGB(15, 15, 15)
-		speedConnection = RunService.Heartbeat:Connect(function()
-			local char = player.Character
-			if char then
-				local hum = char:FindFirstChildOfClass("Humanoid")
-				if hum then
-					hum.WalkSpeed = speedIntensity
+	
+	for _, obj in ipairs(debrisFolder:GetChildren()) do
+		if obj:IsA("BasePart") then
+			local displayNameLabel = nil
+			local generationLabel = nil
+			
+			for _, child in ipairs(obj:GetChildren()) do
+				if child:IsA("BillboardGui") or child:IsA("SurfaceGui") then
+					for _, label in ipairs(child:GetChildren()) do
+						if label:IsA("TextLabel") then
+							local labelName = label.Name
+							if labelName == "DisplayName" then
+								displayNameLabel = label
+							elseif labelName == "Generation" then
+								generationLabel = label
+							end
+						end
+					end
 				end
 			end
-		end)
-		if not boostEnabled then
-			boostEnabled = true
-			startBoost()
-		end
-	else
-		speedButton.Text = "Enable Speed"
-		speedButton.BackgroundColor3 = BLUE_BRIGHT
-		speedButton.TextColor3 = Color3.fromRGB(15, 15, 15)
-		if speedConnection then speedConnection:Disconnect() speedConnection = nil end
-		local char = player.Character
-		if char then
-			local hum = char:FindFirstChildOfClass("Humanoid")
-			if hum then hum.WalkSpeed = 16 end
-		end
-		if boostEnabled then
-			boostEnabled = false
-			stopBoost()
-		end
-	end
-end
-
-speedButton.MouseButton1Click:Connect(toggleSpeed)
-
--- ===== SILLY BOOSTER =====
-local function getCharBoost()
-	local c = player.Character or player.CharacterAdded:Wait()
-	local hrp = c:WaitForChild("HumanoidRootPart")
-	local hum = c:FindFirstChildWhichIsA("Humanoid")
-	return c, hrp, hum
-end
-
-local function getBoostMoveDir()
-	local _, _, hum = getCharBoost()
-	local move = hum.MoveDirection
-	return move.Magnitude > 0.1 and move.Unit or Vector3.zero
-end
-
-startBoost = function()
-	if boostConn then return end
-	boostConn = RunService.Heartbeat:Connect(function()
-		local _, hrp, hum = getCharBoost()
-		if not hrp or not hum then return end
-		local dir = getBoostMoveDir()
-		if dir.Magnitude > 0 then
-			hrp.AssemblyLinearVelocity = Vector3.new(
-				dir.X * BOOST_SPEED,
-				hrp.AssemblyLinearVelocity.Y,
-				dir.Z * BOOST_SPEED
-			)
-		end
-	end)
-end
-
-stopBoost = function()
-	if boostConn then
-		boostConn:Disconnect()
-		boostConn = nil
-	end
-end
-
--- ===== DRAGGING =====
-local dragging, dragStart, startPos
-mainFrame.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then 
-		dragging = true 
-		dragStart = input.Position 
-		startPos = mainFrame.Position 
-	end
-end)
-UserInputService.InputChanged:Connect(function(input)
-	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-		local delta = input.Position - dragStart
-		mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-	end
-end)
-UserInputService.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		dragging = false
-		persistSettings()
-	end
-end)
-
--- ===== RESET TO WORK =====
-local function ResetToWork()
-	local flags = {
-		{"GameNetPVHeaderRotationalVelocityZeroCutoffExponent", "-5000"},
-		{"LargeReplicatorWrite5", "true"},
-		{"LargeReplicatorEnabled9", "true"},
-		{"AngularVelociryLimit", "360"},
-		{"TimestepArbiterVelocityCriteriaThresholdTwoDt", "2147483646"},
-		{"S2PhysicsSenderRate", "15000"},
-		{"DisableDPIScale", "true"},
-		{"MaxDataPacketPerSend", "2147483647"},
-		{"ServerMaxBandwith", "52"},
-		{"PhysicsSenderMaxBandwidthBps", "20000"},
-		{"MaxTimestepMultiplierBuoyancy", "2147483647"},
-		{"SimOwnedNOUCountThresholdMillionth", "2147483647"},
-		{"MaxMissedWorldStepsRemembered", "-2147483648"},
-		{"CheckPVDifferencesForInterpolationMinVelThresholdStudsPerSecHundredth", "1"},
-		{"StreamJobNOUVolumeLengthCap", "2147483647"},
-		{"DebugSendDistInSteps", "-2147483648"},
-		{"MaxTimestepMultiplierAcceleration", "2147483647"},
-		{"LargeReplicatorRead5", "true"},
-		{"SimExplicitlyCappedTimestepMultiplier", "2147483646"},
-		{"GameNetDontSendRedundantNumTimes", "1"},
-		{"CheckPVDifferencesForInterpolationMinRotVelThresholdRadsPerSecHundredth", "1"},
-		{"GameNetDontSendRedundantDeltaPositionMillionth", "1"},
-		{"InterpolationFrameVelocityThresholdMillionth", "5"},
-		{"StreamJobNOUVolumeCap", "2147483647"},
-		{"InterpolationFrameRotVelocityThresholdMillionth", "5"},
-		{"WorldStepMax", "30"},
-		{"TimestepArbiterHumanoidLinearVelThreshold", "1"},
-		{"InterpolationFramePositionThresholdMillionth", "5"},
-		{"TimestepArbiterHumanoidTurningVelThreshold", "1"},
-		{"MaxTimestepMultiplierContstraint", "2147483647"},
-		{"GameNetPVHeaderLinearVelocityZeroCutoffExponent", "-5000"},
-		{"CheckPVCachedVelThresholdPercent", "10"},
-		{"TimestepArbiterOmegaThou", "1073741823"},
-		{"MaxAcceptableUpdateDelay", "1"},
-		{"LargeReplicatorSerializeWrite4", "true"},
-	}
-	for _, data in ipairs(flags) do pcall(function() if setfflag then setfflag(data[1], data[2]) end end) end
-	
-	local char = player.Character
-	if char then
-		local hum = char:FindFirstChildOfClass("Humanoid")
-		if hum then hum:ChangeState(Enum.HumanoidStateType.Dead) end
-		char:ClearAllChildren()
-		local f = Instance.new("Model", workspace)
-		player.Character = f task.wait()
-		player.Character = char f:Destroy()
-	end
-end
-
-task.spawn(function() task.wait(1) ResetToWork() end)
-
--- ===== LOGIQUE SYSTEME (Semi TP) =====
-local allAnimalsCache = {}
-local InternalStealCache = {}
-local IsStealing = false
-local StealProgress = 0
-
-local function getHRP() 
-	local char = player.Character 
-	return char and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("UpperTorso")) 
-end
-
-local function isMyBase(plotName) 
-	local plot = workspace.Plots:FindFirstChild(plotName) 
-	return plot and plot:FindFirstChild("PlotSign") and plot.PlotSign:FindFirstChild("YourBase") and plot.PlotSign.YourBase.Enabled 
-end
-
-local function scan() 
-	table.clear(allAnimalsCache) 
-	for _, p in ipairs(workspace.Plots:GetChildren()) do 
-		if not isMyBase(p.Name) and p:FindFirstChild("AnimalPodiums") then 
-			for _, pod in ipairs(p.AnimalPodiums:GetChildren()) do 
-				if pod:FindFirstChild("Base") then 
-					table.insert(allAnimalsCache, {plot=p.Name, slot=pod.Name, worldPosition=pod:GetPivot().Position, uid=p.Name.."_"..pod.Name}) 
-				end 
-			end 
-		end 
-	end 
-end
-
-task.spawn(function() while task.wait(5) do scan() end end) 
-scan()
-
-local function buildSteal(prompt) 
-	if InternalStealCache[prompt] then return end 
-	local d = {hold={}, trig={}, ready=true} 
-	local ok1, c1 = pcall(getconnections, prompt.PromptButtonHoldBegan) 
-	if ok1 then for _, c in ipairs(c1) do table.insert(d.hold, c.Function) end end 
-	local ok2, c2 = pcall(getconnections, prompt.Triggered) 
-	if ok2 then for _, c in ipairs(c2) do table.insert(d.trig, c.Function) end end 
-	InternalStealCache[prompt] = d 
-end
-
-local function execSteal(prompt, animal, seq) 
-	buildSteal(prompt) 
-	local d = InternalStealCache[prompt] 
-	if not d or not d.ready or IsStealing then return end 
-	d.ready = false 
-	IsStealing = true 
-	StealProgress = 0 
-	progressBarFill.Size = UDim2.new(0, 0, 1, 0) 
-	progressBarFill.BackgroundTransparency = 0 
-	progressBarStroke.Color = BLUE_MAIN 
-
-	local tpDone = false 
-	task.spawn(function() 
-		for _, f in ipairs(d.hold) do task.spawn(f) end 
-		local s = tick() 
-		while tick()-s < 1.3 do 
-			StealProgress = (tick()-s)/1.3 
-			if not tpDone then 
-				progressBarFill.Size = UDim2.new(math.clamp(StealProgress, 0, 1), 0, 1, 0) 
-			end 
-			if StealProgress >= 0.73 and not tpDone then 
-				tpDone = true 
-				local hrp = getHRP() 
-				if hrp then 
-					local b = player:FindFirstChild("Backpack")
-					if b and b:FindFirstChild("Flying Carpet") then 
-						player.Character.Humanoid:EquipTool(b["Flying Carpet"]) 
-						task.wait(0.1) 
-					end
-					hrp.CFrame = seq[1] 
-					task.wait(0.1) 
-					hrp.CFrame = seq[2] 
-					task.wait(0.2) 
-					local d1 = (hrp.Position-pos1).Magnitude 
-					local d2 = (hrp.Position-pos2).Magnitude 
-					hrp.CFrame = CFrame.new(d1<d2 and pos1 or pos2) 
+			
+			if displayNameLabel and generationLabel then
+				local displayName = displayNameLabel.Text or "Unknown"
+				local generation = generationLabel.Text or "0"
+				local value = parseMoney(generation)
+				
+				if not isPetNearPlayerBase(obj) and isPetNearAnyPlot(obj) and obj.Position.Y <= 10 then
+					table.insert(results, {
+						part = obj,
+						displayName = displayName,
+						generation = generation,
+						value = value
+					})
 				end
-				progressBarFill.Size = UDim2.new(1, 0, 1, 0) 
-			end 
-			task.wait() 
-		end 
-		progressBarFill.Size = UDim2.new(1, 0, 1, 0) 
-		for _, f in ipairs(d.trig) do task.spawn(f) end 
-		task.wait(0.2) 
-		TweenService:Create(progressBarFill, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play() 
-		TweenService:Create(progressBarStroke, TweenInfo.new(0.3), {Color = Color3.fromRGB(60, 60, 60)}):Play() 
-		task.wait(0.4) 
-		progressBarFill.Size = UDim2.new(0, 0, 1, 0) 
-		progressBarFill.BackgroundTransparency = 0 
-		d.ready=true 
-		IsStealing=false 
-		StealProgress=0 
-	end) 
+			end
+		end
+	end
+	
+	return results
 end
 
--- ===== STEAL HELPERS =====
-local function doStealLeft()
-	local hrp = getHRP() 
-	if not hrp or IsStealing then return end
-	scan()
-	local target, dist = nil, 200
-	for _, a in ipairs(allAnimalsCache) do 
-		local d = (hrp.Position-a.worldPosition).Magnitude 
-		if d < dist then dist=d target=a end 
-	end
-	if target then
-		local p = workspace.Plots[target.plot].AnimalPodiums[target.slot].Base.Spawn.PromptAttachment:FindFirstChildOfClass("ProximityPrompt")
-		if p then execSteal(p, target, spot1_sequence) end
-	end
-end
-
-local function doStealRight()
-	local hrp = getHRP() 
-	if not hrp or IsStealing then return end
-	scan()
-	local target, dist = nil, 200
-	for _, a in ipairs(allAnimalsCache) do 
-		local d = (hrp.Position-a.worldPosition).Magnitude 
-		if d < dist then dist=d target=a end 
-	end
-	if target then
-		local p = workspace.Plots[target.plot].AnimalPodiums[target.slot].Base.Spawn.PromptAttachment:FindFirstChildOfClass("ProximityPrompt")
-		if p then execSteal(p, target, spot2_sequence) end
-	end
-end
-
--- ===== BUTTON CLICKS =====
-btnLeft.MouseButton1Click:Connect(doStealLeft)
-btnRight.MouseButton1Click:Connect(doStealRight)
-
--- ===== TOGGLE MENU + KEYBINDS =====
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed then return end
-	if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-
-	if listeningFor then
-		finishListening(input.KeyCode)
+local function updateTargetDisplay()
+	local targetPet = selectedPetModel
+	
+	if targetPet and detectedPets[targetPet] then
+		local petData = detectedPets[targetPet]
+		targetLabel.Text = petData.name .. " - " .. formatMoney(petData.value)
+		targetLabel.TextColor3 = Color3.fromRGB(170, 130, 255)
 		return
 	end
-
-	if input.KeyCode == keybinds.toggle then
-		mainFrame.Visible = not mainFrame.Visible
-	elseif input.KeyCode == keybinds.tpLeft then
-		doStealLeft()
-	elseif input.KeyCode == keybinds.tpRight then
-		doStealRight()
-	elseif input.KeyCode == keybinds.speed then
-		toggleSpeed()
-	elseif input.KeyCode == keybinds.allow then
-		toggleAllow()
+	
+	if bestPetModel and detectedPets[bestPetModel] then
+		local petData = detectedPets[bestPetModel]
+		targetLabel.Text = petData.name .. " - " .. formatMoney(petData.value)
+		targetLabel.TextColor3 = Color3.fromRGB(85, 255, 127)
+		return
 	end
+	
+	targetLabel.Text = "None Selected"
+	targetLabel.TextColor3 = Color3.fromRGB(150, 150, 155)
+end
+
+local function updatePetListGUI(petList)
+	for _, child in ipairs(scrollFrame:GetChildren()) do
+		if child:IsA("TextButton") then
+			child:Destroy()
+		end
+	end
+	
+	table.sort(petList, function(a, b)
+		return a.value > b.value
+	end)
+	
+	for i, petData in ipairs(petList) do
+		local entry = Instance.new("TextButton")
+		entry.Name = "PetEntry_" .. i
+		entry.Size = UDim2.new(1, -10, 0, isMobile and 28 or 35)
+		entry.BackgroundColor3 = i % 2 == 0 and Color3.fromRGB(35, 35, 40) or Color3.fromRGB(30, 30, 35)
+		entry.BorderSizePixel = 0
+		entry.LayoutOrder = i
+		entry.AutoButtonColor = false
+		entry.Text = ""
+		entry.Parent = scrollFrame
+		
+		local isTarget = (selectedPetModel == petData.part) or (not selectedPetModel and bestPetModel == petData.part)
+		
+		if isTarget then
+			entry.BackgroundColor3 = Color3.fromRGB(60, 50, 80)
+		end
+		
+		local entryCorner = Instance.new("UICorner")
+		entryCorner.CornerRadius = UDim.new(0, 4)
+		entryCorner.Parent = entry
+		
+		local rankLabel = Instance.new("TextLabel")
+		rankLabel.Size = UDim2.new(0, isMobile and 20 or 25, 1, 0)
+		rankLabel.Position = UDim2.new(0, 5, 0, 0)
+		rankLabel.BackgroundTransparency = 1
+		rankLabel.Text = "#" .. i
+		rankLabel.TextColor3 = Color3.fromRGB(150, 150, 155)
+		rankLabel.TextSize = isMobile and 10 or 12
+		rankLabel.Font = Enum.Font.GothamBold
+		rankLabel.TextXAlignment = Enum.TextXAlignment.Left
+		rankLabel.Parent = entry
+		
+		local nameLabel = Instance.new("TextLabel")
+		nameLabel.Size = UDim2.new(0.5, isMobile and -28 or -35, 1, 0)
+		nameLabel.Position = UDim2.new(0, isMobile and 25 or 30, 0, 0)
+		nameLabel.BackgroundTransparency = 1
+		nameLabel.Text = petData.displayName
+		nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+		nameLabel.TextSize = isMobile and 9 or 11
+		nameLabel.Font = Enum.Font.Gotham
+		nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+		nameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+		nameLabel.Parent = entry
+		
+		local valueLabel = Instance.new("TextLabel")
+		valueLabel.Size = UDim2.new(0.5, -5, 1, 0)
+		valueLabel.Position = UDim2.new(0.5, 0, 0, 0)
+		valueLabel.BackgroundTransparency = 1
+		valueLabel.Text = formatMoney(petData.value)
+		valueLabel.TextColor3 = i == 1 and Color3.fromRGB(85, 255, 127) or Color3.fromRGB(255, 215, 85)
+		valueLabel.TextSize = isMobile and 9 or 11
+		valueLabel.Font = Enum.Font.GothamBold
+		valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+		valueLabel.Parent = entry
+		
+		entry.MouseButton1Click:Connect(function()
+			selectedPetModel = petData.part
+			updateTargetDisplay()
+			updatePetListGUI(petList)
+		end)
+		
+		entry.MouseEnter:Connect(function()
+			if not isTarget then
+				entry.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+			end
+		end)
+		
+		entry.MouseLeave:Connect(function()
+			if not isTarget then
+				entry.BackgroundColor3 = i % 2 == 0 and Color3.fromRGB(35, 35, 40) or Color3.fromRGB(30, 30, 35)
+			end
+		end)
+	end
+	
+	local contentSize = listLayout.AbsoluteContentSize
+	scrollFrame.CanvasSize = UDim2.new(0, 0, 0, contentSize.Y + 10)
+end
+
+local function updateBestPet()
+	detectedPets = {}
+	local allPets = findAllPetsInDebris()
+	
+	local bestValue = -math.huge
+	bestPetModel = nil
+	
+	for _, petData in ipairs(allPets) do
+		detectedPets[petData.part] = {
+			name = petData.displayName,
+			value = petData.value,
+			part = petData.part
+		}
+		
+		if petData.value > bestValue then
+			bestValue = petData.value
+			bestPetModel = petData.part
+		end
+	end
+	
+	updatePetListGUI(allPets)
+	updateTargetDisplay()
+end
+
+task.spawn(function()
+	while true do
+		updateBestPet()
+		task.wait(3)
+	end
+end)
+
+local function clearWaypoints()
+	for _, waypoint in ipairs(waypoints) do
+		if waypoint.marker then
+			waypoint.marker:Destroy()
+		end
+	end
+	waypoints = {}
+end
+
+local function createPathToPet()
+	local targetPet = selectedPetModel or bestPetModel
+	
+	if not targetPet then
+		return false, "No target selected!"
+	end
+	
+	local targetPart = targetPet
+	if not targetPart then
+		return false, "Can't find pet location!"
+	end
+	
+	clearWaypoints()
+	
+	local startPos = humanoidRootPart.Position
+	local endPos = targetPart.Position
+	
+	table.insert(waypoints, {position = startPos + Vector3.new(0, 3, 0), marker = nil})
+	
+	local hasObstacle, obstaclePos, obstacleDistance = checkObstacleAbove(startPos, 50)
+	
+	if hasObstacle then
+		local greenPart1 = findClosestGreenPart(startPos)
+		if greenPart1 then
+			local elevatedPos = greenPart1.Position + Vector3.new(0, math.min(9, greenPart1.Size.Y/2 + 5), 0)
+			table.insert(waypoints, {position = elevatedPos, marker = nil})
+		end
+	end
+	
+	local greenPart2 = findClosestGreenPart(endPos)
+	if greenPart2 then
+		local elevatedPos = greenPart2.Position + Vector3.new(0, math.min(9, greenPart2.Size.Y/2 + 5), 0)
+		table.insert(waypoints, {position = elevatedPos, marker = nil})
+	end
+	
+	local finalPos = Vector3.new(endPos.X, 4, endPos.Z)
+	table.insert(waypoints, {position = finalPos, marker = nil})
+	
+	return true, string.format("%d waypoints created", #waypoints)
+end
+
+local function doTeleport()
+	if isPlaying then return end
+	
+	local success, message = createPathToPet()
+	
+	if success then
+		isPlaying = true
+		tpButton.BackgroundColor3 = Color3.fromRGB(50, 100, 150)
+		tpButton.Text = isMobile and "TPing..." or "Teleporting..."
+		
+		local backpack = player:FindFirstChild("Backpack")
+		if backpack then
+			local carpet = backpack:FindFirstChild("Flying Carpet")
+			if carpet and character then
+				local humanoid = character:FindFirstChild("Humanoid")
+				if humanoid then
+					humanoid:EquipTool(carpet)
+				end
+			end
+		end
+		
+		crunchBody()
+		
+		for i, waypoint in ipairs(waypoints) do
+			if waypoint and waypoint.position then
+				local humanoid = character:FindFirstChild("Humanoid")
+				if humanoid then
+					local maxHealth = humanoid.MaxHealth
+					local currentHealth = humanoid.Health
+					
+					humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+					humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+					
+					humanoidRootPart.CFrame = CFrame.new(waypoint.position)
+					
+					if humanoid.Health < currentHealth then
+						humanoid.Health = currentHealth
+					end
+				else
+					humanoidRootPart.CFrame = CFrame.new(waypoint.position)
+				end
+				
+				if i == #waypoints then
+					restoreBody()
+				end
+				
+				task.wait(0.1)
+			end
+		end
+		
+		restoreBody()
+		
+		task.wait(0.1)
+		local humanoid = character:FindFirstChild("Humanoid")
+		if humanoid then
+			humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
+			humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
+		end
+		
+		isPlaying = false
+		tpButton.BackgroundColor3 = Color3.fromRGB(85, 170, 255)
+		tpButton.Text = isMobile and "Teleport (Z)" or "Teleport to Target (Z)"
+		clearWaypoints()
+	end
+end
+
+tpButton.MouseButton1Click:Connect(function()
+	doTeleport()
+end)
+
+tpButton.MouseEnter:Connect(function()
+	if not isPlaying then
+		tpButton.BackgroundColor3 = Color3.fromRGB(100, 190, 255)
+	end
+end)
+
+tpButton.MouseLeave:Connect(function()
+	if not isPlaying then
+		tpButton.BackgroundColor3 = Color3.fromRGB(85, 170, 255)
+	end
+end)
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then return end
+	
+	local focusedTextBox = UserInputService:GetFocusedTextBox()
+	if focusedTextBox then return end
+	
+	if input.KeyCode == Enum.KeyCode.Z then
+		doTeleport()
+	end
+end)
+
+player.CharacterAdded:Connect(function(newCharacter)
+	character = newCharacter
+	humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+	updateSpawnerHeight()
+	originalSizes = {}
 end)
